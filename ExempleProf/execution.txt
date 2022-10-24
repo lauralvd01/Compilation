@@ -1,0 +1,4 @@
+1. Exécuter le fichier python
+2. Commande : nasm -f elf64 ouf.asm
+3. Commande : gcc -no-pie ouf.o
+4. Commande : ./a.out <argument1> <argument2>
