@@ -1,4 +1,3 @@
-from asyncio.windows_events import NULL
 import lark
 
 grammaire = lark.Lark(r"""
@@ -27,7 +26,7 @@ OPBIN : /[+\-*>]/
 """,start="prg")
 
 op = {'+' : 'add', '-' : 'sub', '*' : 'mult'}
-coordonnees = [NULL,NULL,NULL,NULL] # VALIDE pour n'enregistrer qu'1 SEUL quaternion seulement !
+coordonnees = [0,0,0,0] # VALIDE pour n'enregistrer qu'1 SEUL quaternion seulement !
 ## TODO : revoir l'exemple du prof pour voir comment il fait pour sauvegarder des valeurs !
 
 ###
@@ -206,7 +205,10 @@ def pp_prg(p):
 
 
 ast = grammaire.parse("""
-    //TODO
+    main(x,y,z){
+        c = 1 + 3i + 4j + 5k;
+        print(c.i)
+    }
 """)
 #asm = asm_prg(ast)
 #f = open("quat.asm", "w")
