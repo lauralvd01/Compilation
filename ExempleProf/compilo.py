@@ -152,7 +152,7 @@ def pp_var_list(vl):
     return ", ".join([t.value for t in vl.children])
 
 def asm_prg(p):
-    f = open("moule.asm")
+    f = open("ExempleProf/moule.asm")
     moule = f.read()
     C = asm_bcom(p.children[1])
     moule = moule.replace("BODY", C)
@@ -196,7 +196,7 @@ ast = grammaire.parse("""main(x,y){
 }
 """)
 asm = asm_prg(ast)
-f = open("ouf.asm", "w")
+f = open("ExempleProf/ouf.asm", "w")
 f.write(asm)
 f.close()
 
