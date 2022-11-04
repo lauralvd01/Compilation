@@ -121,11 +121,82 @@ main() {
 ###### ASSEMBLEUR ######
 ########################
 
-#cpt = 0
-#def next():
-#    global cpt
-#    cpt += 1
-#    return cpt
+###############
+#### FLOAT ####
+###############
+
+def float_transfer_rax_to_st():
+    ## As mov st(0), rax
+    ## Empile le float, enregistré dans le qword d'addresse enregistrée par rax, dans la pile Stack du FPU 
+    ## --> met à jour st(0) par rapport à rax
+    s = "finit\n"
+    s += "fld qword [rax]\n"
+    return 
+
+def float_transfer_rsp_to_st():
+    ## As pop st
+    ## Dépile le float au top de la pile stack du ALU et l'empile à la pile stack du FPU
+    ## --> récupère le float enregistré en rsp et l'empile à la pile stack du FPU
+    ## --> incrémente rsp pour libérer la case au top de la pile stack du ALU
+    s = "finit\n"
+    s += "fld qword [rsp]\n"
+    s += "add rsp, 8\n"
+    return s
+
+def float_transfer_st_to_rsp():
+    ## As push st
+    ## Dépile le float enregistré au top de la pile stack du FPU et l'empile dans la pile stack du ALU
+    ## --> décrémente rsp pour allouer une nouvelle case à la pile stack du ALU
+    ## --> dépile le float enregistré en st(0) et le met en rsp
+    
+    #s = "finit\n" Pourquoi ici non ?
+    s = "sub rsp, 8\n"
+    s += "fstp qword [rsp]\n"
+    return s
+
+def float_transfer_st_to_storage():
+    ## As mov [rsp], st
+    ## Dépile le float au top de la pile stack du FPU et le sauvegarde dans la case de la pile stack ALU
+    ##  dont l'addresse est désignée par la valeur au top de la pile ALU
+    ## --> Récupère (sans dépiler rsp) l'addresse de stockage et l'enregistre comme valeur de rbx
+    ## --> Dépile la pile stack du FPU et sauvegarde le float récupérée à l'addresse enregistrée dans rbx
+
+    #s = "finit\n" Pourquoi ici non ?
+    s = "mov rbx, [rsp]\n"
+    s += "fstp qword [rbx]\n"
+
+
+###############
+# QUATERNIONS #
+###############
+
+def quat_update_st_from_rax():
+    ## As mov st, rax
+    ## Empile le quaternion dans la pile stack du FPU
+    ## --> met à jour st(0) par rapport à la partie réelle enregistrée dans [rax] (à partir de l'addresse de rax et sur 8 octets)
+    ## --> met à jour st(1) par rapport à la coordonnée i enregistrée dans [rax + 8]
+    ## --> met à jour st(2) par rapport à la coordonnée j enregistrée dans [rax + 16]
+    ## --> met à jour st(3) par rapport à la coordonnée k enregistrée dans [rax + 24]
+    s = "finit\n"
+    s += "fld qword [rax]\n"
+    s += "fld qword [rax + 8]\n"
+    s += "fld qwprd [rax + 16]\n"
+    s += "fld qword [rax + 24]\n"
+    return s
+
+def quat_update_rsp_from_st():
+    ## As pu
+    ## Dépile la pile stack du FPU pour enregistrer le quaternion dans la pile ALU
+    ## 
+    
+    s = "finit\n"
+    return s
+
+cpt = 0
+def next():
+    global cpt
+    cpt += 1
+    return cpt
 
 
 def asm_exp(e):
