@@ -5,14 +5,15 @@ exp : SIGNED_NUMBER                 -> exp_nombre
 | IDENTIFIER                        -> exp_var
 | exp OPBIN exp                     -> exp_opbin
 | "(" exp ")"                       -> exp_par
-| "[" SIGNED_NUMBER "]"             -> exp_array_creation
-| IDENTIFIER "[" SIGNED_NUMBER "]"  -> exp_array_access 
+| "[" exp "]"             -> exp_array_creation
+| IDENTIFIER "[" exp "]"  -> exp_array_access 
 
 com : IDENTIFIER "=" exp ";"                    -> assignation
 | "if" "(" exp ")" "{" bcom "}"                 -> if
 | "while" "(" exp ")" "{" bcom "}"              -> while
 | "print" "(" exp ")"                           -> print
-| IDENTIFIER "[" SIGNED_NUMBER "]" "=" exp ";"  -> set_array_value
+| IDENTIFIER "[" exp "]" "=" exp ";"            -> set_array_value
+
 
 bcom : (com)*
 
@@ -42,9 +43,9 @@ def pp_exp(e):
     elif e.data == "exp_opbin":
         return f"{pp_exp(e.children[0])} {e.children[1].value} {pp_exp(e.children[2])}"
     elif e.data == "exp_array_creation":
-        return f"[ {e.children[0].value} ]"
+        return f"[ {pp_exp(e.children[0])} ]"
     elif e.data == "exp_array_access" :
-        return f"{e.children[0].value} [ {e.children[1].value} ]"
+        return f"{e.children[0].value} [ {pp_exp(e.children[1])} ]"
     
 
 def pp_com(c):
@@ -59,7 +60,7 @@ def pp_com(c):
     elif c.data == "print":
         return f"print({pp_exp(c.children[0])})"
     elif c.data == "set_array_value" :
-        return f"{c.children[0].value} [ {c.children[1].value} ] = {pp_exp(c.children[2])};"
+        return f"{c.children[0].value} [ {pp_exp(c.children[1])} ] = {pp_exp(c.children[2])};"
     
 
 def pp_bcom(bc):
@@ -70,7 +71,7 @@ def pp_prg(p):
     L = pp_var_list(p.children[0])
     C = pp_bcom(p.children[1])
     R = pp_exp(p.children[2])
-    return "main( %s ) { %s return(%s);\n}" % (L, C, R)
+    return "main( %s ) { %s \nreturn(%s);\n}" % (L, C, R)
 
 
 def pp_var_list(vl):
@@ -92,9 +93,10 @@ def vars_exp(e):
         R = vars_exp(e.children[2])
         return L | R
     elif e.data == "exp_array_creation":
-        return set()
+        return vars_exp(e.children[0])
     elif e.data == "exp_array_access":
-        return {e.children[0].value}
+        index = vars_exp(e.children[1])
+        return {e.children[0].value} | index
 
 
 def vars_com(c):
@@ -109,7 +111,8 @@ def vars_com(c):
         return vars_exp(c.children[0])
     elif c.data == "set_array_value":
         E = vars_exp(c.children[2])
-        return {c.children[0].value} | E
+        index = vars_exp(c.children[1])
+        return {c.children[0].value} | index | E
 
 
 def vars_bcom(bc):
@@ -146,19 +149,31 @@ def asm_exp(e):
         {op[e.children[1].value]} rax, rbx
         """
     elif e.data == "exp_array_creation" :
-        size = e.children[0].value
+        size = asm_exp(e.children[0])
         return f"""
-        xor rax, rax
-        mov rdi, {size}
+        {size}
+        mov rdi, rax
         add rdi, 1
         imul rdi, 8
+        xor rax, rax
         call malloc
+        
+        mov rbx, rax
+        {size}
+        mov qword rbx, rax
+        mov rax, rbx
         """
     elif e.data == "exp_array_access":
         id = e.children[0].value
-        index = e.children[1].value
+        index = asm_exp(e.children[1])
         return f"""
-        mov rax, [{id} + 8*{index}]
+        {index}
+        mov rdi, {id}
+        mov rbx, rax
+        imul rbx, 8
+        add rbx, 8
+        add rdi, rbx
+        mov rax, [rdi]
         """
 
 
@@ -208,11 +223,18 @@ fin{n} : nop
         """
     elif c.data == "set_array_value" :
         id = c.children[0].value
-        index = c.children[1].value
+        index = asm_exp(c.children[1])
         value = asm_exp(c.children[2])
         return f"""
         {value}
-        mov qword [{id} + 8*{index}], rax
+        mov rcx, rax
+        mov rdi, {id}
+        {index}
+        mov rbx, rax
+        imul rbx, 8
+        add rbx, 8
+        add rdi, rbx
+        mov qword [rdi], rcx
         """
 
 
@@ -250,14 +272,44 @@ def asm_prg(p):
 
 ast = grammaire.parse("""main(){
         x = 5;
-        tab = [10];
-        tab[2] = 2;
-        tab[3] = tab[2];
-        y = tab[3]; 
+        tab = [11];
+        tab[0] = x+2 ;
+        print (tab[0])
+        tab[1] = tab[0] + 1;
+        y = tab[-1]; 
     return (y);
 }
 """)
-asm = asm_prg(ast)
+
+ast2 = grammaire.parse("""main(x){
+        tab = [x];
+        tab[0] = 1;
+        while(x){
+            tab[x-1] = x;
+            x = x - 1;
+        }
+    return (tab[2]);
+}
+""")
+
+ast3 = grammaire.parse("""main(){
+        tab = [5];
+        tab[0] = 2;
+        tab[1] = 4;
+        tab[2] = 3;
+        tab[3] = 2;
+        tab[4] = 4;
+        i = 5;
+        somme = 0;
+        while(i){
+            i = i - 1;
+            somme = somme + tab[i];
+        }
+    return (somme);
+}
+""")
+
+asm = asm_prg(ast3)
 # print(asm)
 f = open("ouf.asm", "w")
 f.write(asm)
