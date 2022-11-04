@@ -1,5 +1,9 @@
 import lark
 
+#######################
+###### GRAMMAIRE ######
+#######################
+
 grammaire = lark.Lark(r"""
 exp : SIGNED_FLOAT "+" SIGNED_FLOAT "i" "+" SIGNED_FLOAT "j" "+" SIGNED_FLOAT "k"     -> exp_nombre
 | SIGNED_NUMBER                  -> exp_entier
@@ -28,6 +32,10 @@ OPBIN : /[+\-*>]/
 """,start="prg")
 
 op = {'+' : 'add', '-' : 'sub', '*' : 'mult'}
+
+########################
+#### PRETTY PRINTER ####
+########################
 
 def pp_exp(e):
     if e.data == "exp_nombre":
@@ -93,6 +101,7 @@ def indent(s: str, amplitude = 4):
         words.pop()
     return indent_s + f"\n{indent_s}".join(words) + "\n"
 
+#### TEST ####
 
 print(pp_prg(grammaire.parse("""
 main() {
@@ -108,37 +117,9 @@ main() {
 """)))
 
 
-#def vars_exp(e):
-#    if e.data  == "exp_nombre":
-#        return set()
-#    elif e.data ==  "exp_var":
-#        return { e.children[0].value }
-#    elif e.data == "exp_par":
-#        return vars_exp(e.children[0])
-#    else:
-#        L = vars_exp(e.children[0])
-#        R = vars_exp(e.children[2])
-#        return L | R
-
-###
-# def asm_exp(e):
-#    if e.data == "exp_nombre":
-#        return f"mov rax, {e.children[0].value}\n"
-#    elif e.data == "exp_var":
-#        return f"mov rax, [{e.children[0].value}]\n"
-#    elif e.data == "exp_par":
-#        return asm_exp(e.children[0])
-#    else:
-#        E1 = asm_exp(e.children[0])
-#        E2 = asm_exp(e.children[2])
-#        return f"""
-#        {E2}
-#        push rax
-#        {E1}
-#        pop rbx
-#        {op[e.children[1].value]} rax, rbx
-#        """
-###
+########################
+###### ASSEMBLEUR ######
+########################
 
 #cpt = 0
 #def next():
@@ -146,94 +127,160 @@ main() {
 #    cpt += 1
 #    return cpt
 
-#def asm_com(c):
-#    if c.data == "assignation":
-#        E = asm_exp(c.children[1])
-#        return f"""
-#        {E}
-#        mov [{c.children[0].value}], rax        
-#        """
-#    elif c.data == "if":
-#        E = asm_exp(c.children[0])
-#        C = asm_bcom(c.children[1])
-#        n = next()
-#        return f"""
-#        {E}
-#        cmp rax, 0
-#        jz fin{n}
-#        {C}
-#fin{n} : nop
-#"""
-#    elif c.data == "while":
-#        E = asm_exp(c.children[0])
-#        C = asm_bcom(c.children[1])
-#        n = next()
-#        return f"""
-#        debut{n} : {E}
-#        cmp rax, 0
-#        jz fin{n}
-#        {C}
-#        jmp debut{n}
-#fin{n} : nop
-#"""
-#    elif c.data == "print":
-#        E = asm_exp(c.children[0])
-#        return f"""
-#        {E}
-#        mov rdi, fmt
-#        mov rsi, rax
-#        call printf
-#        """
 
-#def vars_com(c):
-#    if c.data == "assignation":
-#        R = vars_exp(c.children[1])
-#        return {c.children[0].value} | R
-#    elif c.data in {"if", "while"}:
-#        B = vars_bcom(c.children[1])
-#        E = vars_exp(c.children[0]) 
-#        return E | B
-#    elif c.data == "print":
-#        return vars_exp(c.children[0])
+def asm_exp(e):
+    if e.data == "exp_nombre":
+        # TODO
+        return f"mov rax, {e.children[0].value}\n"
+    elif e.data == "exp_entier":
+        # TODO : vérifier si ça change
+        return f"mov rax, {e.children[0].value}\n"
+    elif e.data == "exp_var":
+        # TODO
+        return f"mov rax, [{e.children[0].value}]\n"
+    elif e.data == "exp_par":
+        return asm_exp(e.children[0])
+    elif e.data == "exp_opbin":
+        # TODO
+        E1 = asm_exp(e.children[0])
+        E2 = asm_exp(e.children[2])
+        return f"""
+        {E2}
+        push rax
+        {E1}
+        pop rbx
+        {op[e.children[1].value]} rax, rbx
+        """
+    elif e.data == "exp_reel":
+        # TODO
+        return f""
+    elif e.data == "exp_im":
+        # TODO
+        return f""
+    elif e.data == "exp_i":
+        # TODO
+        return f""
+    elif e.data == "exp_j":
+        # TODO
+        return f""
+    elif e.data == "exp_k":
+        # TODO
+        return f""
+    else :
+        return "Cas non traité"
 
-#def asm_bcom(bc):
-#    return "".join([asm_com(c) for c in bc.children])
+def asm_com(c):
+    if c.data == "assignation":
+        # TODO
+        E = asm_exp(c.children[1])
+        return f"""
+        {E}
+        mov [{c.children[0].value}], rax        
+        """
+    elif c.data == "if":
+        E = asm_exp(c.children[0])
+        C = asm_bcom(c.children[1])
+        n = next()
+        return f"""
+        {E}
+        cmp rax, 0
+        jz fin{n}
+        {C}
+        fin{n} : nop
+"""
+    elif c.data == "while":
+        E = asm_exp(c.children[0])
+        C = asm_bcom(c.children[1])
+        n = next()
+        return f"""
+        debut{n} : {E}
+        cmp rax, 0
+        jz fin{n}
+        {C}
+        jmp debut{n}
+        fin{n} : nop
+"""
+    elif c.data == "print":
+        # TODO : apparemment le print va être différent lui aussi
+        E = asm_exp(c.children[0])
+        return f"""
+        {E}
+        mov rdi, fmt
+        mov rsi, rax
+        call printf
+        """
+    else :
+        return "Cas non traité"
 
-#def vars_bcom(bc):
-#    S = set()
-#    for c in bc.children:
-#        S = S | vars_com(c)
-#    return S
+def asm_bcom(bc):
+    return "".join([asm_com(c) for c in bc.children])
 
-#def asm_prg(p):
-#    f = open("moule.asm")
-#    moule = f.read()
-#    C = asm_bcom(p.children[1])
-#    moule = moule.replace("BODY", C)
-#    E = asm_exp(p.children[2])
-#    moule = moule.replace("RETURN", E)
-#    D = "\n".join([f"{v} : dq 0" for v in vars_prg(p)])
-#    moule = moule.replace("DECL_VARS", D)
-#    s = ""
-#    for i in range(len(p.children[0].children)):
-#        v = p.children[0].children[i].value
-#        e = f"""
-#        mov rbx, [argv]
-#        mov rdi, [rbx + { 8*(i+1)}]
-#        xor rax, rax
-#        call atoi
-#        mov [{v}], rax
-#        """
-#        s = s + e
-#    moule = moule.replace("INIT_VARS", s)    
-#    return moule
+def asm_prg(p):
+    # TODO : vérifier si le moule est identique
+    f = open("moule.asm")
+    moule = f.read()
+    C = asm_bcom(p.children[1])
+    moule = moule.replace("BODY", C)
+    E = asm_exp(p.children[2])
+    moule = moule.replace("RETURN", E)
+    # TODO : vérifier si la déclaration des variables ne change pas
+    D = "\n".join([f"{v} : dq 0" for v in vars_prg(p)])
+    moule = moule.replace("DECL_VARS", D)
+    # TODO : l'initialisation va forcément changer
+    s = ""
+    for i in range(len(p.children[0].children)):
+        v = p.children[0].children[i].value
+        e = f"""
+        mov rbx, [argv]
+        mov rdi, [rbx + { 8*(i+1)}]
+        xor rax, rax
+        call atoi
+        mov [{v}], rax
+        """
+        s = s + e
+    moule = moule.replace("INIT_VARS", s)    
+    return moule
 
-#def vars_prg(p):
-#    L = set([t.value for t in p.children[0].children])
-#    C = vars_bcom(p.children[1])
-#    R = vars_exp(p.children[2])
-#    return L | C | R
 
+#### VARIABLES SET ####
+
+def vars_exp(e):
+    if e.data  == "exp_nombre":
+        return set()
+    elif e.data ==  "exp_var":
+        return { e.children[0].value }
+    elif e.data == "exp_par":
+        return vars_exp(e.children[0])
+    else:
+        L = vars_exp(e.children[0])
+        R = vars_exp(e.children[2])
+        return L | R
+
+def vars_com(c):
+    if c.data == "assignation":
+        R = vars_exp(c.children[1])
+        return {c.children[0].value} | R
+    elif c.data in {"if", "while"}:
+        B = vars_bcom(c.children[1])
+        E = vars_exp(c.children[0]) 
+        return E | B
+    elif c.data == "print":
+        return vars_exp(c.children[0])
+
+def vars_bcom(bc):
+    S = set()
+    for c in bc.children:
+        S = S | vars_com(c)
+    return S
+
+def vars_prg(p):
+    L = set([t.value for t in p.children[0].children])
+    C = vars_bcom(p.children[1])
+    R = vars_exp(p.children[2])
+    return L | C | R
+
+
+#### TESTS ####
 
 #ast = grammaire.parse("""
 #    main(x,y,z){
