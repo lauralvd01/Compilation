@@ -9,7 +9,8 @@ coord_j : db "%g j +", 0
 coord_k : db "%g k +", 10, 0
 argc : dq 0
 argv : dq 0
-
+y : dq 0
+x : dq 0
 
 section .text
 global main
@@ -18,17 +19,18 @@ main :
     mov [argc], rdi
     mov [argv], rsi
     
-    mov rax, __float64__(2.)
-finit
-fld qword [rax]
-mov rdi, float_print
-sub rsp, 8
-fst qword [rsp]
-movq xmm0, qword [rsp]
-add rsp, 32
-call printf
+        mov rbx, [argv]
+        mov rdi, [rbx + 8]
+        xor rax, rax
+        call atoi
+        mov [x], rax
+        
+    
+        mov [rax], 3
 
-    mov rax, 1
+        mov [y], rax        
+        
+    mov rax, [x]
 
     mov rdi, fmt
     mov rsi, rax

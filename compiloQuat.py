@@ -5,7 +5,7 @@ import lark
 #######################
 
 grammaire = lark.Lark(r"""
-exp : SIGNED_FLOAT "+" SIGNED_FLOAT "i" "+" SIGNED_FLOAT "j" "+" SIGNED_FLOAT "k"     -> exp_nombre
+exp : SIGNED_FLOAT "+" SIGNED_FLOAT "i" "+" SIGNED_FLOAT "j" "+" SIGNED_FLOAT "k"     -> exp_quat
 | SIGNED_FLOAT                   -> exp_float
 | SIGNED_NUMBER                  -> exp_entier
 | IDENTIFIER                     -> exp_var
@@ -39,7 +39,7 @@ op = {'+' : 'add', '-' : 'sub', '*' : 'mult'}
 ########################
 
 def pp_exp(e):
-    if e.data == "exp_nombre":
+    if e.data == "exp_quat":
         return f"{e.children[0].value} + {e.children[1].value}i + {e.children[2].value}j + {e.children[3].value}k"
     elif e.data == "exp_float":
         return f"{e.children[0].value}"
@@ -118,15 +118,15 @@ main() {
 ###############
 
 def float_get_in_rax_from_tree_exp(e):
-    ## Récupère la valeur de l'expression représentant un float et l'enregistre dans rax
+    ## Récupère la valeur de l'expression représentant un float et l'enregistre dans [rax]
     return f"mov rax, __float64__({e.children[0].value})\n"
 
 def float_transfer_rax_to_st():
     ## As mov st(0), rax
-    ## Empile le float, enregistré dans le qword d'addresse enregistrée par rax, dans la pile Stack du FPU 
+    ## Empile le float, enregistré par le qword rax, dans la pile Stack du FPU 
     ## --> met à jour st(0) par rapport à rax
     s = "finit\n"
-    s += "fld qword [rax]\n"
+    s += "fld qword rax\n"
     return s
 
 def float_transfer_rsp_to_st():
@@ -180,9 +180,6 @@ def float_mult():
     # TODO : idem
     return
 
-def float_div():
-    # TODO : idem
-    return
 
 ###############
 # QUATERNIONS #
@@ -192,7 +189,7 @@ def float_div():
 # On initialise, au début du programme, un dictionnaire avec pour clés toutes
 #  les variables utilisées au cours du programme, et pour chacune la valeur 
 #  sera une adresse relative à rbp le bas de la pile stack ALU, décalée de 
-#  32 cases par rapport à la précédente :
+#  32 bytes par rapport à la précédente :
 positions_des_variables = {}
 
 # Les coordonnées d'un quaternion sont toujours enregistrées dans les piles stack
@@ -323,15 +320,18 @@ def next():
 
 
 def asm_exp(e):
-    if e.data == "exp_nombre":
+    global positions_des_variables
+    if e.data == "exp_quat":
+        # Enregistre les coordonnées du quaternion À L'ADRESSE indiquée DANS rax
         return quat_get_in_rax_from_tree_exp(e)
     elif e.data == "exp_entier":
         return f"mov rax, {e.children[0].value}\n"
     elif e.data == "exp_float":
         return float_get_in_rax_from_tree_exp(e)
     elif e.data == "exp_var":
-        # TODO
-        return f"mov rax, [{e.children[0].value}]\n"
+        # Lit dans le dictionnaire des adresses des variables l'adresse de la variable
+        #   pour pouvoir obtenir la valeur de la variable dans rax
+        return f"mov rax, [{positions_des_variables[e.children[0].value]}]\n"
     elif e.data == "exp_par":
         return asm_exp(e.children[0])
     elif e.data == "exp_opbin":
@@ -431,9 +431,8 @@ def asm_prg(p):
 
     global positions_des_variables
     positions_des_variables = {}
-    positions_des_variables["rax"]=f"rbp - 32"
     for i in range(len(variables)) :
-        positions_des_variables[f"{variables[i]}"]= f"rbp - {(i+2)*32}"
+        positions_des_variables[f"{variables[i]}"]= f"rbp - {(i+1)*32}"
     
     # TODO : vérifier si la déclaration des variables ne change pas
     D = "\n".join([f"{v} : dq 0" for v in vars_prg(p)])
@@ -458,7 +457,7 @@ def asm_prg(p):
 #### VARIABLES SET ####
 
 def vars_exp(e):
-    if e.data  in {"exp_nombre","exp_float","exp_entier"}:
+    if e.data  in {"exp_quat","exp_float","exp_entier"}:
         return set()
     elif e.data ==  "exp_var":
         return { e.children[0].value }
@@ -498,9 +497,9 @@ def vars_prg(p):
 #### TESTS ####
 
 ast = grammaire.parse("""
-    main(){
-        print(2.)
-        return(1);
+    main(x){
+        y = 3;
+        return(y);
     }
 """)
 asm = asm_prg(ast)
