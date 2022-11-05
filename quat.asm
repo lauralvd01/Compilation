@@ -9,7 +9,7 @@ coord_j : db "%g j +", 0
 coord_k : db "%g k +", 10, 0
 argc : dq 0
 argv : dq 0
-DECL_VARS
+
 
 section .text
 global main
@@ -17,9 +17,19 @@ main :
     push rbp
     mov [argc], rdi
     mov [argv], rsi
-    INIT_VARS
-    BODY
-    RETURN
+    
+    mov rax, __float64__(2.)
+finit
+fld qword [rax]
+mov rdi, float_print
+sub rsp, 8
+fst qword [rsp]
+movq xmm0, qword [rsp]
+add rsp, 32
+call printf
+
+    mov rax, 1
+
     mov rdi, fmt
     mov rsi, rax
     call printf

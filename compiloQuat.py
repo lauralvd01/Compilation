@@ -64,10 +64,6 @@ def pp_exp(e):
     else:
         return "Cas non autorisé actuellement"
 
-def pp_assignation(c):
-    assert(c.data == "assignation")
-    str = f"{c.children[0].value} = "
-    return str
 
 def pp_com(c):
     if c.data == "assignation":
@@ -131,7 +127,7 @@ def float_transfer_rax_to_st():
     ## --> met à jour st(0) par rapport à rax
     s = "finit\n"
     s += "fld qword [rax]\n"
-    return 
+    return s
 
 def float_transfer_rsp_to_st():
     ## As pop st
@@ -160,10 +156,11 @@ def float_transfer_st_to_storage():
     ## --> Dépile la pile stack du FPU et sauvegarde le float récupérée à l'addresse enregistrée dans rbx
     s = "mov rbx, [rsp]\n"
     s += "fstp qword [rbx]\n"
+    return s
 
 def float_print_from_st():
     ## Print un float enregistré au top st(0) de la pile stack FPU
-    s = "mov rdi, float\n"
+    s = "mov rdi, float_print\n"
     s += "sub rsp, 8\n"
     s += "fst qword [rsp]\n"
     s += "movq xmm0, qword [rsp]\n"
@@ -274,13 +271,36 @@ def quat_transfer_st_to_storage():
     s += "fstp qword [rbx + 24]\n"
 
 def quat_print_from_st():
-    # TODO
-    s = "sup rsp, 8"
+    # Print un quaternion enregistré dans la pile stack du FPU (et le dépile)
     s += "mov rdi, partie_reelle\n"
-    s += "movq wmm0, qword [rax]\n"
+    s = "sup rsp, 8"
+    s += "fstp qword [rsp]\n"
+    s += "movq wmm0, qword [rsp]\n"
     s += "add rsp, 8"
     s += "call printf\n"
-    return ""
+
+    s += "mov rdi, coord_i\n"
+    s = "sup rsp, 8"
+    s += "fstp qword [rsp]\n"
+    s += "movq wmm0, qword [rsp]\n"
+    s += "add rsp, 8"
+    s += "call printf\n"
+
+    s += "mov rdi, coord_j\n"
+    s = "sup rsp, 8"
+    s += "fstp qword [rsp]\n"
+    s += "movq wmm0, qword [rsp]\n"
+    s += "add rsp, 8"
+    s += "call printf\n"
+
+    s += "mov rdi, coord_k\n"
+    s = "sup rsp, 8"
+    s += "fstp qword [rsp]\n"
+    s += "movq wmm0, qword [rsp]\n"
+    s += "add rsp, 8"
+    s += "call printf\n"
+    
+    return s
 
 def quat_add():
     # TODO : déterminer les arguments --> déterminer excatement quand la fonction sera appelé
@@ -375,12 +395,13 @@ def asm_com(c):
         fin{n} : nop
         """
     elif c.data == "print":
-        # TODO : apparemment le print va être différent lui aussi
+        # TODO 
         if(c.children[0].data == "exp_float"):
             s = ""
-            s += f"{float_get_in_rax_from_tree_exp(c.children[0])}"
-            s += f"{float_transfer_rax_to_st}"
-            s += f"{float_print_from_st()}"
+            get = float_get_in_rax_from_tree_exp(c.children[0])
+            transfer = float_transfer_rax_to_st()
+            print = float_print_from_st()
+            s += get + transfer + print
             return s
         E = asm_exp(c.children[0])
         return f"""
@@ -396,22 +417,28 @@ def asm_bcom(bc):
     return "".join([asm_com(c) for c in bc.children])
 
 def asm_prg(p):
-    # TODO : vérifier si le moule est identique
     f = open("moule.asm")
     moule = f.read()
+    
     C = asm_bcom(p.children[1])
     moule = moule.replace("BODY", C)
+    
     E = asm_exp(p.children[2])
     moule = moule.replace("RETURN", E)
+    
     ## Création du disctionnaire des adresses des variables
     variables = [v for v in vars_prg(p)]
+
     global positions_des_variables
+    positions_des_variables = {}
     positions_des_variables["rax"]=f"rbp - 32"
     for i in range(len(variables)) :
         positions_des_variables[f"{variables[i]}"]= f"rbp - {(i+2)*32}"
+    
     # TODO : vérifier si la déclaration des variables ne change pas
     D = "\n".join([f"{v} : dq 0" for v in vars_prg(p)])
     moule = moule.replace("DECL_VARS", D)
+    
     # TODO : l'initialisation va forcément changer
     s = ""
     for i in range(len(p.children[0].children)):
@@ -431,16 +458,18 @@ def asm_prg(p):
 #### VARIABLES SET ####
 
 def vars_exp(e):
-    if e.data  in ["exp_nombre","exp_float","exp_entier"]:
+    if e.data  in {"exp_nombre","exp_float","exp_entier"}:
         return set()
     elif e.data ==  "exp_var":
         return { e.children[0].value }
     elif e.data == "exp_par":
         return vars_exp(e.children[0])
-    else:
+    elif e.data == "exp_opbin":
         L = vars_exp(e.children[0])
         R = vars_exp(e.children[2])
         return L | R
+    elif e.data in {"exp_reel","exp_im","exp_i","exp_j","exp_k"}:
+        return vars_exp(e.children[0])
 
 def vars_com(c):
     if c.data == "assignation":
@@ -469,7 +498,7 @@ def vars_prg(p):
 #### TESTS ####
 
 ast = grammaire.parse("""
-    main(x,y,z){
+    main(){
         print(2.)
         return(1);
     }
