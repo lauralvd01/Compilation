@@ -190,6 +190,7 @@ def float_mult():
 #  les variables utilisées au cours du programme, et pour chacune la valeur 
 #  sera une adresse relative à rbp le bas de la pile stack ALU, décalée de 
 #  32 bytes par rapport à la précédente :
+type_des_variables = {}
 positions_des_variables = {}
 
 # Les coordonnées d'un quaternion sont toujours enregistrées dans les piles stack
@@ -311,13 +312,24 @@ def quat_mult():
     # TODO : idem
     return
 
-
-cpt = 0
-def next():
-    global cpt
-    cpt += 1
-    return cpt
-
+def type_exp(e):
+    global type_des_variables
+    if e.data == "exp_quat" :
+        return "quat"
+    elif e.data == "exp_float":
+        return "float"
+    elif e.data == "exp_entier":
+        return "entier"
+    elif e.data == "exp_var":
+        return f"{type_des_variables[e.children[0].value]}"
+    elif e.data == "exp_opbin":
+        return type_exp(e.children[0])
+    elif e.data == "exp_par":
+        return type_exp(e.children[0])
+    elif e.data in {"exp_reel","exp_im","exp_i","exp_j","exp_k"}:
+        return "quat"
+    else:
+        "Cas non traité"
 
 def asm_exp(e):
     global positions_des_variables
@@ -363,14 +375,34 @@ def asm_exp(e):
     else :
         return "Cas non traité"
 
+
+cpt = 0
+def next():
+    global cpt
+    cpt += 1
+    return cpt
+
+
 def asm_com(c):
+    global type_des_variables
+    global positions_des_variables
     if c.data == "assignation":
-        # TODO
-        E = asm_exp(c.children[1])
-        return f"""
-        {E}
-        mov [{c.children[0].value}], rax        
-        """
+        type_var = type_exp(c.children[1])
+        type_des_variables[c.children[0].value] = type_var
+        if(type_var in {"entier","float"}):
+            E = asm_exp(c.children[1])
+            return f"""
+            {E}
+            mov [{c.children[0].value}], rax        
+            """
+        elif(type_var == "quat"):
+            adresse = positions_des_variables[c.children[0].value]
+            s = ""
+            # Stockage du quaternion résultat de l'expression dans la pile stack du FPU
+            s += asm_exp(c.children[1])
+            # Enregistrement dans la pile stack du ALU à l'adresse prévue pour la variable
+            s += quat_transfer_st_to_storage(adresse)
+
     elif c.data == "if":
         E = asm_exp(c.children[0])
         C = asm_bcom(c.children[1])
