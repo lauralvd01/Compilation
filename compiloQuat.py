@@ -6,6 +6,7 @@ import lark
 
 grammaire = lark.Lark(r"""
 exp : SIGNED_FLOAT "+" SIGNED_FLOAT "i" "+" SIGNED_FLOAT "j" "+" SIGNED_FLOAT "k"     -> exp_nombre
+| SIGNED_FLOAT                   -> exp_float
 | SIGNED_NUMBER                  -> exp_entier
 | IDENTIFIER                     -> exp_var
 | exp OPBIN exp                  -> exp_opbin
@@ -40,8 +41,12 @@ op = {'+' : 'add', '-' : 'sub', '*' : 'mult'}
 def pp_exp(e):
     if e.data == "exp_nombre":
         return f"{e.children[0].value} + {e.children[1].value}i + {e.children[2].value}j + {e.children[3].value}k"
+    elif e.data == "exp_float":
+        return f"{e.children[0].value}"
+    elif e.data == "exp_entier":
+        return f"{e.children[0].value}"
     elif e.data == "exp_var":
-        return e.children[0].value
+        return f"{e.children[0].value}"
     elif e.data == "exp_par":
         return f"({pp_exp(e.children[0])})"
     elif e.data == "exp_opbin":
@@ -56,8 +61,6 @@ def pp_exp(e):
         return f"{pp_exp(e.children[0])}.j"
     elif e.data == "exp_k":
         return f"{pp_exp(e.children[0])}.k"
-    elif e.data == "exp_entier":
-        return f"{e.children[0]}"
     else:
         return "Cas non autorisé actuellement"
 
@@ -105,13 +108,6 @@ def indent(s: str, amplitude = 4):
 
 print(pp_prg(grammaire.parse("""
 main() {
-    x = 1. + 2.0i + 3.0j + 4.0k;
-    if (x) {
-        y = 4. + 2.0i +3.0j + 4.0k;
-        while(y){
-            i = i + 1. + 2.i + 3.j + 4.k;
-        }
-    }
     return (x);
 }
 """)))
@@ -124,6 +120,10 @@ main() {
 ###############
 #### FLOAT ####
 ###############
+
+def float_get_in_rax_from_tree_exp(e):
+    ## Récupère la valeur de l'expression représentant un float et l'enregistre dans rax
+    return f"mov rax, __float64__({e.children[0].value})\n"
 
 def float_transfer_rax_to_st():
     ## As mov st(0), rax
@@ -148,8 +148,6 @@ def float_transfer_st_to_rsp():
     ## Dépile le float enregistré au top de la pile stack du FPU et l'empile dans la pile stack du ALU
     ## --> décrémente rsp pour allouer une nouvelle case à la pile stack du ALU
     ## --> dépile le float enregistré en st(0) et le met en rsp
-    
-    #s = "finit\n" Pourquoi ici non ?
     s = "sub rsp, 8\n"
     s += "fstp qword [rsp]\n"
     return s
@@ -160,37 +158,142 @@ def float_transfer_st_to_storage():
     ##  dont l'addresse est désignée par la valeur au top de la pile ALU
     ## --> Récupère (sans dépiler rsp) l'addresse de stockage et l'enregistre comme valeur de rbx
     ## --> Dépile la pile stack du FPU et sauvegarde le float récupérée à l'addresse enregistrée dans rbx
-
-    #s = "finit\n" Pourquoi ici non ?
     s = "mov rbx, [rsp]\n"
     s += "fstp qword [rbx]\n"
 
+def float_print_from_st():
+    ## Print un float enregistré au top st(0) de la pile stack FPU
+    s = "mov rdi, float\n"
+    s += "sub rsp, 8\n"
+    s += "fst qword [rsp]\n"
+    s += "movq xmm0, qword [rsp]\n"
+    s += "add rsp, 8\n"
+    s += "call printf\n"
+    return s
+
+def float_add():
+    # TODO : déterminer les arguments --> déterminer excatement quand la fonction sera appelé
+    return ""
+
+def float_sub():
+    # TODO : idem
+    return
+
+def float_mult():
+    # TODO : idem
+    return
+
+def float_div():
+    # TODO : idem
+    return
 
 ###############
 # QUATERNIONS #
 ###############
 
-def quat_update_st_from_rax():
-    ## As mov st, rax
-    ## Empile le quaternion dans la pile stack du FPU
-    ## --> met à jour st(0) par rapport à la partie réelle enregistrée dans [rax] (à partir de l'addresse de rax et sur 8 octets)
-    ## --> met à jour st(1) par rapport à la coordonnée i enregistrée dans [rax + 8]
-    ## --> met à jour st(2) par rapport à la coordonnée j enregistrée dans [rax + 16]
-    ## --> met à jour st(3) par rapport à la coordonnée k enregistrée dans [rax + 24]
-    s = "finit\n"
-    s += "fld qword [rax]\n"
-    s += "fld qword [rax + 8]\n"
-    s += "fld qwprd [rax + 16]\n"
-    s += "fld qword [rax + 24]\n"
+# Pour être certain qu'il y a assez de place pour stocker chaque quaternion
+# On initialise, au début du programme, un dictionnaire avec pour clés toutes
+#  les variables utilisées au cours du programme, et pour chacune la valeur 
+#  sera une adresse relative à rbp le bas de la pile stack ALU, décalée de 
+#  32 cases par rapport à la précédente :
+positions_des_variables = {}
+
+# Les coordonnées d'un quaternion sont toujours enregistrées dans les piles stack
+#  selon l'ordre croissant des adresses :
+#  la partie réelle dans la case d'adresse la plus petite (st(0) ou [rax] ou [rsp])
+#  la coordonnée k dans la case d'adresse la plus grande (st(3) ou [rax + 24] ou [rsp + 24])
+
+
+def quat_get_in_rax_from_tree_exp(e):
+    ## Récupère la valeur de l'expression représentant un quaternion et l'enregistre dans [rax]
+    r,i,j,k = [e.children[f].value for f in range(4)]
+    s = f"mov [rax], __float64__{r}\n"
+    s += f"mov [rax + 8], __float64__{i}\n"
+    s += f"mov [rax + 16], __float64__{j}\n"
+    s += f"mov [rax + 24], __float64__{k}\n"
     return s
 
-def quat_update_rsp_from_st():
-    ## As pu
-    ## Dépile la pile stack du FPU pour enregistrer le quaternion dans la pile ALU
-    ## 
-    
+def quat_transfer_rax_to_st():
+    ## As mov st, rax
+    ## Empile le quaternion dans la pile stack du FPU
+    ## --> met à jour st(0) (qui deviendra st(3)) par rapport à la coordonnée k enregistrée dans [rax]
+    ## --> met à jour st(0) (qui deviendra st(2)) par rapport à la coordonnée j enregistrée dans [rax - 8]
+    ## --> met à jour st(0) (qui deviendra st(1)) par rapport à la coordonnée i enregistrée dans [rax - 16]
+    ## --> met à jour st(0) par rapport à la partie réelle enregistrée dans [rax - 24]
     s = "finit\n"
+    s += "fld qword [rax + 24]\n"
+    s += "fld qwprd [rax + 16]\n"
+    s += "fld qword [rax + 8]\n"
+    s += "fld qword [rax]\n"
     return s
+
+def quat_transfer_rsp_to_st():
+    ## As pop st
+    ## Dépile le quaternion au top de la pile stack du ALU et l'empile à la pile stack du FPU
+    ## --> met à jour st(0) (qui deviendra st(3)) par rapport à la coordonnée k enregistrée dans [rsp + 24]
+    ## --> met à jour st(0) (qui deviendra st(2)) par rapport à la coordonnée j enregistrée dans [rsp + 16]
+    ## --> met à jour st(0) (qui deviendra st(1)) par rapport à la coordonnée i enregistrée dans [rsp + 8]
+    ## --> met à jour st(0) par rapport à la partie réelle enregistrée dans [rsp]
+    ## --> Incrémente rsp de 32 pour libérer la place qui était prise par le quaternion au top de la pile stack du ALU
+    s = "finit\n"
+    s += "fld qword [rsp + 24]\n"
+    s += "fld qword [rsp + 16]\n"
+    s += "fld qword [rsp + 8]\n"
+    s += "fld qword [rsp]\n"
+    s += "add rsp, 32\n"
+    return s
+
+def quat_transfer_st_to_rsp():
+    ## As push st
+    ## Dépile le quaternion enregistré au top de la pile stack du FPU et l'empile dans la pile stack du ALU
+    ## --> décrémente rsp de 32 pour allouer 4 nouvelles cases au top de la pile stack du ALU pour enregister les coordonnées du quaternion
+    ## --> dépile la partie réelle enregistrée en st(0) et l'enregistre en [rsp]
+    ## --> dépile la coordonnée i enregistrée autrefois en st(1) et l'enregistre en [rsp + 8]
+    ## --> dépile la coordonnée j enregistrée autrefois en st(2) et l'enregistre en [rsp + 16]
+    ## --> dépile la coordonnée k enregistrée autrefois en st(3) et l'enregistre en [rsp + 24]
+    s = "sub rsp, 32\n"
+    s += "fstp qword [rsp]\n"
+    s += "fstp qword [rsp + 8]\n"
+    s += "fstp qword [rsp + 16]\n"
+    s += "fstp qword [rsp + 24]\n"
+    return s
+
+def quat_transfer_st_to_storage():
+    ## As mov [rsp], st
+    ## Dépile le quaternion au top de la pile stack du FPU et le sauvegarde dans la case de la pile stack ALU
+    ##  dont l'addresse est désignée par la valeur au top de la pile ALU
+    ## --> Récupère (sans dépiler rsp) l'addresse de stockage et l'enregistre comme valeur de rbx
+    ## --> dépile la partie réelle enregistrée en st(0) et l'enregistre en [rbx]
+    ## --> dépile la coordonnée i enregistrée autrefois en st(1) et l'enregistre en [rbx + 8]
+    ## --> dépile la coordonnée j enregistrée autrefois en st(2) et l'enregistre en [rbx + 16]
+    ## --> dépile la coordonnée k enregistrée autrefois en st(3) et l'enregistre en [rbx + 24]
+    s = "mov rbx, [rsp]\n"
+    s += "fstp qword [rbx]\n"
+    s += "fstp qword [rbx + 8]\n"
+    s += "fstp qword [rbx + 16]\n"
+    s += "fstp qword [rbx + 24]\n"
+
+def quat_print_from_st():
+    # TODO
+    s = "sup rsp, 8"
+    s += "mov rdi, partie_reelle\n"
+    s += "movq wmm0, qword [rax]\n"
+    s += "add rsp, 8"
+    s += "call printf\n"
+    return ""
+
+def quat_add():
+    # TODO : déterminer les arguments --> déterminer excatement quand la fonction sera appelé
+    return ""
+
+def quat_sub():
+    # TODO : idem
+    return
+
+def quat_mult():
+    # TODO : idem
+    return
+
 
 cpt = 0
 def next():
@@ -201,11 +304,11 @@ def next():
 
 def asm_exp(e):
     if e.data == "exp_nombre":
-        # TODO
-        return f"mov rax, {e.children[0].value}\n"
+        return quat_get_in_rax_from_tree_exp(e)
     elif e.data == "exp_entier":
-        # TODO : vérifier si ça change
         return f"mov rax, {e.children[0].value}\n"
+    elif e.data == "exp_float":
+        return float_get_in_rax_from_tree_exp(e)
     elif e.data == "exp_var":
         # TODO
         return f"mov rax, [{e.children[0].value}]\n"
@@ -258,7 +361,7 @@ def asm_com(c):
         jz fin{n}
         {C}
         fin{n} : nop
-"""
+        """
     elif c.data == "while":
         E = asm_exp(c.children[0])
         C = asm_bcom(c.children[1])
@@ -270,9 +373,15 @@ def asm_com(c):
         {C}
         jmp debut{n}
         fin{n} : nop
-"""
+        """
     elif c.data == "print":
         # TODO : apparemment le print va être différent lui aussi
+        if(c.children[0].data == "exp_float"):
+            s = ""
+            s += f"{float_get_in_rax_from_tree_exp(c.children[0])}"
+            s += f"{float_transfer_rax_to_st}"
+            s += f"{float_print_from_st()}"
+            return s
         E = asm_exp(c.children[0])
         return f"""
         {E}
@@ -294,6 +403,12 @@ def asm_prg(p):
     moule = moule.replace("BODY", C)
     E = asm_exp(p.children[2])
     moule = moule.replace("RETURN", E)
+    ## Création du disctionnaire des adresses des variables
+    variables = [v for v in vars_prg(p)]
+    global positions_des_variables
+    positions_des_variables["rax"]=f"rbp - 32"
+    for i in range(len(variables)) :
+        positions_des_variables[f"{variables[i]}"]= f"rbp - {(i+2)*32}"
     # TODO : vérifier si la déclaration des variables ne change pas
     D = "\n".join([f"{v} : dq 0" for v in vars_prg(p)])
     moule = moule.replace("DECL_VARS", D)
@@ -316,7 +431,7 @@ def asm_prg(p):
 #### VARIABLES SET ####
 
 def vars_exp(e):
-    if e.data  == "exp_nombre":
+    if e.data  in ["exp_nombre","exp_float","exp_entier"]:
         return set()
     elif e.data ==  "exp_var":
         return { e.children[0].value }
@@ -353,13 +468,13 @@ def vars_prg(p):
 
 #### TESTS ####
 
-#ast = grammaire.parse("""
-#    main(x,y,z){
-#        c = 1 + 3i + 4j + 5k;
-#        print(c.i)
-#    }
-#""")
-#asm = asm_prg(ast)
-#f = open("quat.asm", "w")
-#f.write(asm)
-#f.close()
+ast = grammaire.parse("""
+    main(x,y,z){
+        print(2.)
+        return(1);
+    }
+""")
+asm = asm_prg(ast)
+f = open("quat.asm", "w")
+f.write(asm)
+f.close()
