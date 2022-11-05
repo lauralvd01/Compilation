@@ -329,15 +329,39 @@ def quat_print_from_st():
     
     return s
 
-def quat_add():
-    # TODO : déterminer les arguments --> déterminer excatement quand la fonction sera appelé
-    return ""
+def quat_add(e):
+    # Calcule le quaternion résultat de l'expression 2 et l'empile au top de la pile stack du FPU
+    E2 = asm_exp(e.children[0])
+    # Calcule le quaternion résultat de l'expression 1 et l'empile au top de la pile stack du FPU
+    E1 = asm_exp(e.children[0])
+    # On a alors r1 en st(1), i1 en st(2), j1 en st(3), k1 en st(4), r2 en st(5), i2 en st(6), j2 en st(7) et k2 en st(3)
+    s = f"""
+    {E2}
+    {E1}
+    fadd st0,st4
+    fadd st1,st5
+    fadd st2,st6
+    fadd st3,st7
+    """
+    return s
 
-def quat_sub():
-    # TODO : idem
-    return
+def quat_sub(e):
+    # Calcule le quaternion résultat de l'expression 2 et l'empile au top de la pile stack du FPU
+    E2 = asm_exp(e.children[0])
+    # Calcule le quaternion résultat de l'expression 1 et l'empile au top de la pile stack du FPU
+    E1 = asm_exp(e.children[0])
+    # On a alors r1 en st(1), i1 en st(2), j1 en st(3), k1 en st(4), r2 en st(5), i2 en st(6), j2 en st(7) et k2 en st(3)
+    s = f"""
+    {E2}
+    {E1}
+    fsub st0,st4
+    fsub st1,st5
+    fsub st2,st6
+    fsub st3,st7
+    """
+    return s
 
-def quat_mult():
+def quat_mult(e):
     # TODO : idem
     return
 
