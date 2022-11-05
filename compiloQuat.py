@@ -268,6 +268,22 @@ def quat_transfer_st_to_storage():
     s += "fstp qword [rbx + 16]\n"
     s += "fstp qword [rbx + 24]\n"
 
+def quat_get_in_st_from_storage():
+    ## As mov st, [rsp]
+    ## Li le quaternion sauvegardé à l'adresse indiqué par [rsp] et l'empile dans la pile stack du FPU
+    ## --> Récupère (sans dépiler rsp) l'addresse de stockage et l'enregistre comme valeur de rbx
+    ## --> met à jour st(0) (qui deviendra st(3)) par rapport à la coordonnée k enregistrée dans [rbx + 24]
+    ## --> met à jour st(0) (qui deviendra st(2)) par rapport à la coordonnée j enregistrée dans [rbx + 16]
+    ## --> met à jour st(0) (qui deviendra st(1)) par rapport à la coordonnée i enregistrée dans [rbx + 8]
+    ## --> met à jour st(0) par rapport à la partie réelle enregistrée dans [rbx]
+    s = "mov rbx, [rsp]\n"
+    s += "finit\n"
+    s += "fld qword [rbx + 24]\n"
+    s += "fld qword [rbx + 16]\n"
+    s += "fld qword [rbx + 8]\n"
+    s += "fld qword [rbx]\n"
+    return s
+
 def quat_print_from_st():
     # Print un quaternion enregistré dans la pile stack du FPU (et le dépile)
     s += "mov rdi, partie_reelle\n"
@@ -332,20 +348,37 @@ def type_exp(e):
         "Cas non traité"
 
 def asm_exp(e):
+    global type_des_variables
     global positions_des_variables
     if e.data == "exp_quat":
-        # Enregistre les coordonnées du quaternion À L'ADRESSE indiquée DANS rax
-        return quat_get_in_rax_from_tree_exp(e)
+        # Enregistre les coordonnées du quaternion dans la pile stack du FPU
+        return quat_get_in_st_from_tree_exp(e)
+
     elif e.data == "exp_entier":
         return f"mov rax, {e.children[0].value}\n"
+
     elif e.data == "exp_float":
         return float_get_in_rax_from_tree_exp(e)
+
     elif e.data == "exp_var":
-        # Lit dans le dictionnaire des adresses des variables l'adresse de la variable
-        #   pour pouvoir obtenir la valeur de la variable dans rax
-        return f"mov rax, [{positions_des_variables[e.children[0].value]}]\n"
+        type_var = type_des_variables[e.children[0].value]
+        position_var = positions_des_variables[e.children[0].value]
+        if(type_var in {"entier","float"}):
+            # Lit dans le dictionnaire des adresses des variables l'adresse de la variable
+            #   pour pouvoir obtenir sa valeur de la variable dans rax
+            return f"mov rax, [{position_var}]\n"
+        elif(type_var == "quat"):
+            # Enregistre les coordonnées du quaternion désigné par la variable dans la pile stack du FPU
+            s = ""
+            # Stockage de l'adresse du quaternion au top de la pile stack du ALU
+            s += f"push {position_var}\n"
+            # Transfert des coordonées du quaternion enregistré à l'adresse indiquée dans rsp (puis st)
+            s += quat_get_in_st_from_storage()
+            return s
+
     elif e.data == "exp_par":
         return asm_exp(e.children[0])
+
     elif e.data == "exp_opbin":
         # TODO
         E1 = asm_exp(e.children[0])
@@ -400,8 +433,12 @@ def asm_com(c):
             s = ""
             # Stockage du quaternion résultat de l'expression dans la pile stack du FPU
             s += asm_exp(c.children[1])
+            # Stockage de l'adresse du quaternion au top de la pile stack du ALU
+            s += f"push {adresse}\n"
             # Enregistrement dans la pile stack du ALU à l'adresse prévue pour la variable
-            s += quat_transfer_st_to_storage(adresse)
+            s += quat_transfer_st_to_storage()
+        else:
+            return "Cas non traité"
 
     elif c.data == "if":
         E = asm_exp(c.children[0])
@@ -414,6 +451,7 @@ def asm_com(c):
         {C}
         fin{n} : nop
         """
+
     elif c.data == "while":
         E = asm_exp(c.children[0])
         C = asm_bcom(c.children[1])
@@ -426,6 +464,7 @@ def asm_com(c):
         jmp debut{n}
         fin{n} : nop
         """
+
     elif c.data == "print":
         type_print = type_exp(c.children[0])
         if(type_print == "entier"):
@@ -448,6 +487,8 @@ def asm_com(c):
             s += quat_get_in_st_from_tree_exp(c.children[0])
             s += quat_print_from_st()
             return s
+        else:
+            return "Cas non traité"
     else :
         return "Cas non traité"
 
