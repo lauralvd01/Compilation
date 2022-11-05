@@ -362,8 +362,26 @@ def quat_sub(e):
     return s
 
 def quat_mult(e):
-    # TODO : idem
-    return
+    # Calcule le quaternion résultat de l'expression 2 et l'empile au top de la pile stack du FPU
+    E2 = asm_exp(e.children[0])
+    # Calcule le quaternion résultat de l'expression 1 et l'empile au top de la pile stack du FPU
+    E1 = asm_exp(e.children[0])
+    # On a alors r1 en st(1), i1 en st(2), j1 en st(3), k1 en st(4), r2 en st(5), i2 en st(6), j2 en st(7) et k2 en st(3)
+    
+    # Le résultat de (r1 + i1.i + j1.j + k1.k)*(r2 + i2.i + j2.j + k2.k) est
+    # r1*r2 - i1*i2 - j1*j2 - k1*k2 +
+    # (r1*i2 + i1*r2 + j1*k2 -k1*j2).i +
+    # (r1*j2 + j1*r2 + k1*i2 -i1*k2).j +
+    # (r1*k2 + k1*r2 + i1*j2 -j1*i2). k
+    s = f"""
+    {E2}
+    {E1}
+    fsub st0,st4
+    fsub st1,st5
+    fsub st2,st6
+    fsub st3,st7
+    """
+    return s
 
 def type_exp(e):
     global type_des_variables
