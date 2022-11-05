@@ -117,9 +117,16 @@ main() {
 #### FLOAT ####
 ###############
 
-def float_get_in_rax_from_tree_exp(e):
-    ## Récupère la valeur de l'expression représentant un float et l'enregistre dans [rax]
-    return f"mov rax, __float64__({e.children[0].value})\n"
+def float_get_in_st_from_tree_exp(e):
+    ## Récupère la valeur de l'expression représentant un float et l'enregistre dans rax,
+    ##  puis l'empile dans la pile stack du ALU et enfin dans la pile stack du FPU
+    ## Incrémnte rsp de 8 pour libérer la place qui a été allouée au float au top de la pile stack du ALU
+    s = "finit\n"
+    s += f"mov rax, __float64__({e.children[0].value})\n"
+    s += "push rax"
+    s += "fld qword [rsp]"
+    s += "add rsp, 8"
+    return s
 
 def float_transfer_rax_to_st():
     ## As mov st(0), rax
@@ -200,12 +207,31 @@ positions_des_variables = {}
 
 
 def quat_get_in_st_from_tree_exp(e):
-    ## Récupère la valeur de l'expression représentant un quaternion et l'enregistre dans [rax]
+    ## Récupère la valeur de l'expression représentant un quaternion et pour chaque coordonnée :
+    ##  enregistre la coordonnée dans rax, l'empile dans la pile stack du ALU puis dans la pile stack du FPU
+    ## Pour chaque coordonnée : 
+    ## --> enregistre la coordonnée dans rax et l'empile dans la pile stack du ALU
+    ## --> met à jour st(0) par rapport à la coordonnée enregistrée dans [rsp]
+    ## Puis incrémnte rsp de 32 pour libérer la place qui a été allouée aux coordonnées au top de la pile stack du ALU
     r,i,j,k = [e.children[f].value for f in range(4)]
-    s = f"mov [rax], __float64__{r}\n"
-    s += f"mov [rax + 8], __float64__{i}\n"
-    s += f"mov [rax + 16], __float64__{j}\n"
-    s += f"mov [rax + 24], __float64__{k}\n"
+    s = "finit\n"
+    s += f"mov rax, __float64__{k}\n"
+    s += "push rax\n"
+    s += "fld qword [rsp]\n"
+
+    s += f"mov rax, __float64__{j}\n"
+    s += "push rax\n"
+    s += "fld qword [rsp]\n"
+
+    s += f"mov rax, __float64__{i}\n"
+    s += "push rax\n"
+    s += "fld qword [rsp]\n"
+
+    s += f"mov rax, __float64__{r}\n"
+    s += "push rax\n"
+    s += "fld qword [rsp]\n"
+
+    s += "add rsp, 32\n"
     return s
 
 def quat_transfer_rax_to_st():
@@ -358,15 +384,22 @@ def asm_exp(e):
         return f"mov rax, {e.children[0].value}\n"
 
     elif e.data == "exp_float":
-        return float_get_in_rax_from_tree_exp(e)
+        # Enregistre le float au top de la pile stack du FPU
+        return float_get_in_st_from_tree_exp(e)
 
     elif e.data == "exp_var":
         type_var = type_des_variables[e.children[0].value]
         position_var = positions_des_variables[e.children[0].value]
-        if(type_var in {"entier","float"}):
+        if(type_var == "entier"):
             # Lit dans le dictionnaire des adresses des variables l'adresse de la variable
             #   pour pouvoir obtenir sa valeur de la variable dans rax
             return f"mov rax, [{position_var}]\n"
+
+        elif(type_var == "float"):
+            s = float_transfer_st_to_rsp
+            s += "mov rax, [rsp]"
+            return s
+
         elif(type_var == "quat"):
             # Enregistre les coordonnées du quaternion désigné par la variable dans la pile stack du FPU
             s = ""
@@ -375,21 +408,32 @@ def asm_exp(e):
             # Transfert des coordonées du quaternion enregistré à l'adresse indiquée dans rsp (puis st)
             s += quat_get_in_st_from_storage()
             return s
+        else:
+            return "Cas non traité"
 
     elif e.data == "exp_par":
         return asm_exp(e.children[0])
 
     elif e.data == "exp_opbin":
-        # TODO
-        E1 = asm_exp(e.children[0])
-        E2 = asm_exp(e.children[2])
-        return f"""
-        {E2}
-        push rax
-        {E1}
-        pop rbx
-        {op[e.children[1].value]} rax, rbx
-        """
+        type_op = type_exp(e.children[0])
+        if(type_op == "entier"):
+            E1 = asm_exp(e.children[0])
+            E2 = asm_exp(e.children[2])
+            return f"""
+            {E2}
+            push rax
+            {E1}
+            pop rbx
+            {op[e.children[1].value]} rax, rbx
+            """
+        elif(type_op == "float"):
+            # TODO
+            return ""
+        
+        elif(type_op == "quat"):
+            # TODO
+            return ""
+
     elif e.data == "exp_reel":
         # TODO
         return f""
@@ -477,10 +521,9 @@ def asm_com(c):
             """
         elif(type_print == "float"):
             s = ""
-            get = float_get_in_rax_from_tree_exp(c.children[0])
-            transfer = float_transfer_rax_to_st()
+            get = float_get_in_st_from_tree_exp(c.children[0])
             print = float_print_from_st()
-            s += get + transfer + print
+            s += get + print
             return s
         elif(type_print == "quat"):
             s = ""
