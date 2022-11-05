@@ -32,7 +32,6 @@ OPBIN : /[+\-*>]/
 %ignore WS
 """,start="prg")
 
-op = {'+' : 'add', '-' : 'sub', '*' : 'mult'}
 
 ########################
 #### PRETTY PRINTER ####
@@ -62,7 +61,7 @@ def pp_exp(e):
     elif e.data == "exp_k":
         return f"{pp_exp(e.children[0])}.k"
     else:
-        return "Cas non autorisé actuellement"
+        return "Cas non traité"
 
 
 def pp_com(c):
@@ -75,8 +74,9 @@ def pp_com(c):
         x = f"\n{indent(pp_bcom(c.children[1]))}"
         return f"while ({pp_exp(c.children[0])}) {{{x}}}"
     elif c.data == "print":
-        # TODO
         return f"print({pp_exp(c.children[0])})"
+    else:
+        return "Cas non traité"
 
 def pp_bcom(bc):
     return "\n".join([pp_com(c) for c in bc.children])
@@ -175,17 +175,6 @@ def float_print_from_st():
     s += "call printf\n"
     return s
 
-def float_add():
-    # TODO : déterminer les arguments --> déterminer excatement quand la fonction sera appelé
-    return ""
-
-def float_sub():
-    # TODO : idem
-    return
-
-def float_mult():
-    # TODO : idem
-    return
 
 
 ###############
@@ -373,6 +362,9 @@ def type_exp(e):
     else:
         "Cas non traité"
 
+op = {'+' : 'add', '-' : 'sub', '*' : 'mult'}
+op_float = {'+' : 'faddp', '-' : 'fsubp', '*' : 'fmultp'}
+
 def asm_exp(e):
     global type_des_variables
     global positions_des_variables
@@ -427,8 +419,22 @@ def asm_exp(e):
             {op[e.children[1].value]} rax, rbx
             """
         elif(type_op == "float"):
-            # TODO
-            return ""
+            ## Calcule le résultat de l'opération binaire sur les flottants 
+            ##  et enregistre le résultat dans st(0)
+            s = ""
+            # Calcule le float résultat de l'expression 1 et l'empile en st(0)
+            E1 = asm_exp(e.children[0])
+            # Calcule le float résultat de l'expression 2 et l'empile en st(0)
+            # E1 devient st(1)
+            E2 = asm_exp(e.children[2])
+            # Calcule st1 = st1 op_float st0 et pop st(0) donc le résultat devient le top de la pile stack du FPU
+            resultat = f"{op_float[e.children[1].value]} st1, st0"
+            s += f"""
+            {E1}
+            {E2}
+            {resultat}
+            """
+            return s
         
         elif(type_op == "quat"):
             # TODO
