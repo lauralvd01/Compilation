@@ -199,7 +199,7 @@ positions_des_variables = {}
 #  la coordonnée k dans la case d'adresse la plus grande (st(3) ou [rax + 24] ou [rsp + 24])
 
 
-def quat_get_in_rax_from_tree_exp(e):
+def quat_get_in_st_from_tree_exp(e):
     ## Récupère la valeur de l'expression représentant un quaternion et l'enregistre dans [rax]
     r,i,j,k = [e.children[f].value for f in range(4)]
     s = f"mov [rax], __float64__{r}\n"
@@ -427,21 +427,27 @@ def asm_com(c):
         fin{n} : nop
         """
     elif c.data == "print":
-        # TODO 
-        if(c.children[0].data == "exp_float"):
+        type_print = type_exp(c.children[0])
+        if(type_print == "entier"):
+            E = asm_exp(c.children[0])
+            return f"""
+            {E}
+            mov rdi, fmt
+            mov rsi, rax
+            call printf
+            """
+        elif(type_print == "float"):
             s = ""
             get = float_get_in_rax_from_tree_exp(c.children[0])
             transfer = float_transfer_rax_to_st()
             print = float_print_from_st()
             s += get + transfer + print
             return s
-        E = asm_exp(c.children[0])
-        return f"""
-        {E}
-        mov rdi, fmt
-        mov rsi, rax
-        call printf
-        """
+        elif(type_print == "quat"):
+            s = ""
+            s += quat_get_in_st_from_tree_exp(c.children[0])
+            s += quat_print_from_st()
+            return s
     else :
         return "Cas non traité"
 
