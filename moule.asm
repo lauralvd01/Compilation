@@ -1,7 +1,7 @@
 extern printf, atoi
 
 section .data
-fmt : db "%d", 10, 0
+entier_print : db "%d", 10, 0
 float_print : db "%g", 10, 0
 partie_reelle : db "%g ", 0
 coord_i : db "%g i +", 0
