@@ -144,9 +144,9 @@ def asm_prg(p):
         xor rax, rax
         call atoi
         mov [{adress}], rax 
-        sub rsp, 8
         """
         s = s + e
+    s += f"sub rsp, {8*(len(variables)-1)}"
     moule = moule.replace("INIT_VARS", s)
 
     # we write the body of the assembly
@@ -158,10 +158,10 @@ def asm_prg(p):
     moule = moule.replace("RETURN", E)
 
     # pop all the variables
-    # a = ""
-    # for i in range(cpt):
-    #     a += "pop rbx\n"
-    # moule = moule.replace("END", a)
+    a = ""
+    for i in range(cpt-1):
+        a += "pop rbx\n"
+    moule = moule.replace("END", a)
 
     return moule
 
@@ -249,7 +249,7 @@ def vars_prg(p):
 ### OTHER###
 
 # used to define the adresses of the variables
-cpt = 1
+cpt = 0
 
 
 def increment():
@@ -281,9 +281,12 @@ ast = grammaire.parse(""" main(y){
         
         a = 1;
         a=8.45;
-        y=7.946;
+        y=7;
+        g=3;
+        a=6;
+        
 
- return (y);
+ return (a);
  }
 
 """)

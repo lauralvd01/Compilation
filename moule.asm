@@ -17,6 +17,7 @@ main :
     BODY
 
     RETURN
+    END
     mov rdi, fmt
     mov rsi, rax
     call printf
