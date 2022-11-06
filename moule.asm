@@ -15,6 +15,7 @@ section .text
 global main
 main : 
     push rbp
+    mov rbp, rsp
     mov [argc], rdi
     mov [argv], rsi
     INIT_VARS
@@ -23,5 +24,6 @@ main :
     mov rdi, entier_print
     mov rsi, rax
     call printf
+    mov rsp, rbp
     pop rbp
     ret
