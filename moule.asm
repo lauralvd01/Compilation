@@ -20,7 +20,7 @@ main :
     INIT_VARS
     BODY
     RETURN
-    mov rdi, fmt
+    mov rdi, entier_print
     mov rsi, rax
     call printf
     pop rbp

@@ -768,9 +768,8 @@ def vars_prg(p):
 #### TESTS ####
 
 ast = grammaire.parse("""
-    main(x){
-        y = 3;
-        return(y);
+    main(){
+        return(1);
     }
 """)
 asm = asm_prg(ast)
