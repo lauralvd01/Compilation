@@ -56,11 +56,8 @@ def asm_com(c):
 
         # get the type of the variable
         type = getType(c.children[1])
-
         # get the asm assignation
         E = asm_exp(c.children[1])
-
-        # the variable do exist
 
         if type == variables[v][0]:
             # it is the same type as before
@@ -83,7 +80,7 @@ def asm_com(c):
         C = asm_bcom(c.children[1])
         n = next()
         return f"""
-        {E}
+        {E}                                  
         cmp rax, 0
         jz fin{n}
         {C}
@@ -99,16 +96,31 @@ fin{n} : nop
         jz fin{n}
         {C}
         jmp debut{n}
-fin{n} : nop
+fin{n} : nop                   
 """
     elif c.data == "print":
+
         E = asm_exp(c.children[0])
-        return f"""
+        print("child", c.children[0].children[0])
+        if c.children[0].children[0] in variables:
+            type = variables[c.children[0].children[0]][0]
+        else:
+            type = getType(c.children[0])
+        print("type", type)
+        if type == "int":
+            return f"""
         {E}
-        mov rdi, fmt
+        mov rdi, int_fmt
         mov rsi, rax
         call printf
         """
+        if type == "float":
+            return f"""
+        {E}
+         movq xmm0, qword rax   ; floating point in str
+        mov rdi, float_fmt              ; address of format string
+        mov rax, 1                  ; 1 floating point argument to printf
+        call printf"""
 
 
 def asm_bcom(bc):
@@ -149,19 +161,20 @@ def asm_prg(p):
     s += f"sub rsp, {8*(len(variables)-1)}"
     moule = moule.replace("INIT_VARS", s)
 
+    # pop all the variables at the end of assembly code
+    a = ""
+    for i in range(cpt-1):
+        a += "pop rbx\n"
+    moule = moule.replace("END", a)
+
     # we write the body of the assembly
+    print("children", p.children[1].children[2].data)
     C = asm_bcom(p.children[1])
     moule = moule.replace("BODY", C)
 
     # we return the variable
     E = asm_exp(p.children[2])
     moule = moule.replace("RETURN", E)
-
-    # pop all the variables
-    a = ""
-    for i in range(cpt-1):
-        a += "pop rbx\n"
-    moule = moule.replace("END", a)
 
     return moule
 
@@ -190,6 +203,7 @@ def pp_com(c):
 
 
 def pp_bcom(bc):
+
     return "\n".join([pp_com(c) for c in bc.children])
 
 
@@ -273,22 +287,24 @@ def getType(e):
         return "int"
     elif e.data == "exp_float":
         return "float"
+    elif e.data == "exp_opbin":
+        return getType(e.children[0])
     else:
-        return "undefined"
+        return "int"
 
 
-ast = grammaire.parse(""" main(y){
+ast = grammaire.parse(""" main(x,y){
         
-        a = 1;
-        a=8.45;
-        y=7;
-        g=3;
-        a=6;
-        
-
- return (a);
+        a = 4;
+        i = 0;
+        a = 2.64;
+        i = i + 1;
+        x = x - 1;
+        print(i)
+        print(a)
+             
+ return (y);
  }
-
 """)
 asm = asm_prg(ast)
 print("variable à la fin ", variables)

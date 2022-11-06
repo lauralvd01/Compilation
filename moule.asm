@@ -1,6 +1,7 @@
 extern printf, atoi
 section .data
-fmt : db "%d", 10, 0
+int_fmt : db "%d", 10, 0
+float_fmt : db "%g", 10, 0
 argc : dq 0
 argv : dq 0
 DECL_VARS
@@ -18,9 +19,7 @@ main :
 
     RETURN
     END
-    mov rdi, fmt
-    mov rsi, rax
-    call printf
+
     pop rbp
     ret
 
