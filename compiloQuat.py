@@ -481,23 +481,37 @@ def asm_exp(e):
         if(type_var == "entier"):
             ## Lit dans le dictionnaire des adresses des variables l'adresse de la variable
             ##   pour pouvoir obtenir la valeur de la variable et l'enregistrer dans rax
-            return f"mov rax, [{position_var}]\n"
+            return f"""
+            mov rax, rbp
+            sub rax, {position_var}
+            mov rax, [rax]
+            """
 
         elif(type_var == "float"):
             ## Lit le float enregistré à l'adresse de la variable et l'empile au top de la pile stack du FPU
             ## Enregistre également la valeur dans rax
-            s = f"push qword [{position_var}]\n"
-            s += float_get_rsp_into_st()
-            s += "mov rax, qword [rsp]\n"
+            s = f"""
+            mov rax, rbp
+            sub rax, {position_var}
+            push rax
+            {float_get_rsp_into_st()}
+            mov rax, [rsp]
+            """
             return s
 
         elif(type_var == "quat"):
             ## Enregistre les coordonnées du quaternion désigné par la variable dans la pile stack du FPU :
             s = ""
             # Stockage de l'adresse du quaternion au top de la pile stack du ALU
-            s += f"push {position_var}\n"
+            s += f"""
+            mov rax, rbp
+            sub rax, {position_var}
+            push rax
+            """
             # Empile au top de la pile stack du FPU les coordonées du quaternion enregistré à l'adresse indiquée
-            s += quat_get_in_st_from_storage()
+            s += f"""
+            {quat_get_in_st_from_storage()}
+            """
             return s
         else:
             return "Cas non traité"
@@ -625,20 +639,24 @@ def asm_com(c):
             E = asm_exp(c.children[1])
             return f"""
             {E}
-            mov [{adresse}], rax        
+            mov rbx, rbp
+            sub rbx, {adresse}
+            mov [rbx], rax
             """
         elif type_var == "float":
             # Stockage du float résultat de l'expression dans la pile stack du FPU
             exp = asm_exp(c.children[1])
             # Stockage de l'adresse de la variable au top de la pile stack du ALU
             stock = f"""
-            push {adresse}
-            """
+            mov rax, rbp
+            sub rax, {adresse}
+            push rax"""
             # Enregistrement du float dans la pile stack du ALU à l'adresse prévue pour la variable
-            stock += float_transfer_st_to_storage()
+            stack = float_transfer_st_to_storage()
             s = f"""
             {exp}
             {stock}
+            {stack}
             """
             return s
 
@@ -646,12 +664,16 @@ def asm_com(c):
             # Stockage du quaternion résultat de l'expression dans la pile stack du FPU
             exp = asm_exp(c.children[1])
             # Stockage de l'adresse de la variable au top de la pile stack du ALU
-            stock = f"push {adresse}\n"
+            stock = f"""
+            mov rax, rbp
+            sub rax, {adresse}
+            push rax"""
             # Enregistrement des coordonnées du quaternion dans la pile stack du ALU à l'adresse prévue pour la variable
-            stock += quat_transfer_st_to_storage()
+            stack = quat_transfer_st_to_storage()
             s = f"""
             {exp}
             {stock}
+            {stack}
             """
             return s
         else:
@@ -727,7 +749,7 @@ def asm_prg(p):
     global positions_des_variables
     positions_des_variables = {}
     for i in range(len(variables)) :
-        positions_des_variables[f"{variables[i]}"]= f"rbp - {(i+1)*32}"
+        positions_des_variables[f"{variables[i]}"]= (i+1)*32
     
     # TODO : vérifier si la déclaration des variables ne change pas
     D = "\n".join([f"{v} : dq 0" for v in vars_prg(p)])
@@ -743,7 +765,9 @@ def asm_prg(p):
         mov rdi, [rbx + { 8*(i+1)}]
         xor rax, rax
         call atoi
-        mov [{adresse}], rax
+        mov rbx, rbp
+        sub rbx, {adresse}
+        mov [rbx], rax
         """
         s = s + e
     moule = moule.replace("INIT_VARS", s)
@@ -817,9 +841,10 @@ def vars_prg(p):
 #### TESTS ####
 
 ast = grammaire.parse("""
-    main(x){
-        print(3.1 + 2.4i + 3.6j + 5.4k)
-        return(4.5);
+    main(){
+        y = 3.1;
+        print(y)
+        return(1);
     }
 """)
 asm = asm_prg(ast)
