@@ -654,7 +654,6 @@ def asm_exp(e):
         # Le quaternion résultat de l'expression est enregistré au top de la pile stack du FPU
         E = asm_exp(e.children[0])
         # On enregistre sa coordonnée j au top de la pile stack FPU : on dépile 2 fois
-        # Et puis on lit sa valeur pour l'enregistrer dans rax
         s = f"""
         {E}
         sub rsp, 8
@@ -668,7 +667,6 @@ def asm_exp(e):
         # Le quaternion résultat de l'expression est enregistré au top de la pile stack du FPU
         E = asm_exp(e.children[0])
         # On enregistre sa coordonnée k au top de la pile stack FPU : on dépile 3 fois
-        # Et puis on lit sa valeur pour l'enregistrer dans rax
         s = f"""
         {E}
         sub rsp, 8
@@ -930,8 +928,17 @@ ast = grammaire.parse("""
     main(){
         x = 1. + 2.3i + 4.5j + 3.4k;
         r = 1. + 2.3i + 4.5j + 3.4k;
+
         print(1. + 2.3i + 4.5j + 3.4k)
+        print(1. + 2.3i + 4.5j + 3.4k - 1. + 2.3i + 4.5j + 3.4k)
         print(1. + 2.3i + 4.5j + 3.4k * 1. + 2.3i + 4.5j + 3.4k)
+
+        print(re(1. + 2.3i + 4.5j + 3.4k))
+        print(im(1. + 2.3i + 4.5j + 3.4k))
+
+        print( (1. + 2.3i + 4.5j + 3.4k).i )
+        print( (1. + 2.3i + 4.5j + 3.4k).k )
+
         return(1);
     }
 """)

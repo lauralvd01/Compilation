@@ -41,7 +41,7 @@ main :
     
             
             mov rax, rbp
-            sub rax, 64
+            sub rax, 32
             push rax
             
     mov rbx, [rsp]
@@ -72,7 +72,7 @@ main :
     
             
             mov rax, rbp
-            sub rax, 32
+            sub rax, 64
             push rax
             
     mov rbx, [rsp]
@@ -100,6 +100,85 @@ main :
     fld qword [rsp]
     
     add rsp, 32
+    
+            
+    mov rdi, partie_reelle
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+    mov rdi, coord_i
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+    mov rdi, coord_j
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+    mov rdi, coord_k
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+            
+            
+    
+    mov rax, __float64__(3.4)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(4.5)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(2.3)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(1.)
+    push rax
+    fld qword [rsp]
+    
+    add rsp, 32
+    
+    
+    mov rax, __float64__(3.4)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(4.5)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(2.3)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(1.)
+    push rax
+    fld qword [rsp]
+    
+    add rsp, 32
+    
+    
+    fsubp st4,st0       ; on obtient r1+r2 en st(4) puis on pop donc tout se décale d'un cran
+    fsubp st4,st0       ; on obtient i1+i2 en st(4) puis on pop donc tout se décale d'un cran
+    fsubp st4,st0       ; on obtient j1+j2 en st(4) puis on pop donc tout se décale d'un cran
+    fsubp st4,st0       ; on obtient k1+k2 en st(4) puis on pop donc tout se décale d'un cran
     
             
     mov rdi, partie_reelle
@@ -323,6 +402,163 @@ main :
     mov rdi, coord_k
     sub rsp, 8
     fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+            
+            
+        
+    mov rax, __float64__(3.4)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(4.5)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(2.3)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(1.)
+    push rax
+    fld qword [rsp]
+    
+    add rsp, 32
+    
+        
+            
+    mov rdi, float_print
+    sub rsp, 8
+    fst qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+            
+            
+        
+    mov rax, __float64__(3.4)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(4.5)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(2.3)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(1.)
+    push rax
+    fld qword [rsp]
+    
+    add rsp, 32
+    
+        fsub st0, st0
+        
+            
+    mov rdi, partie_reelle
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+    mov rdi, coord_i
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+    mov rdi, coord_j
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+    mov rdi, coord_k
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+            
+            
+        
+    mov rax, __float64__(3.4)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(4.5)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(2.3)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(1.)
+    push rax
+    fld qword [rsp]
+    
+    add rsp, 32
+    
+        sub rsp, 8
+        fstp qword [rsp]
+        add rsp, 8
+        
+            
+    mov rdi, float_print
+    sub rsp, 8
+    fst qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+            
+            
+        
+    mov rax, __float64__(3.4)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(4.5)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(2.3)
+    push rax
+    fld qword [rsp]
+    
+    mov rax, __float64__(1.)
+    push rax
+    fld qword [rsp]
+    
+    add rsp, 32
+    
+        sub rsp, 8
+        fstp qword [rsp]
+        fstp qword [rsp]
+        fstp qword [rsp]
+        add rsp, 8
+        
+            
+    mov rdi, float_print
+    sub rsp, 8
+    fst qword [rsp]
     movq xmm0, qword [rsp]
     add rsp, 8
     mov rax, 1
