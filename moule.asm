@@ -9,7 +9,7 @@ coord_j : db "%g j +", 0
 coord_k : db "%g k +", 10, 0
 argc : dq 0
 argv : dq 0
-DECL_VARS
+;DECL_VARS
 
 section .text
 global main

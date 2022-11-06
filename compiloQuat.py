@@ -100,14 +100,6 @@ def indent(s: str, amplitude = 4):
         words.pop()
     return indent_s + f"\n{indent_s}".join(words) + "\n"
 
-#### TEST ####
-
-print(pp_prg(grammaire.parse("""
-main() {
-    return (x);
-}
-""")))
-
 
 ########################
 ###### ASSEMBLEUR ######
@@ -134,8 +126,10 @@ def float_get_rsp_into_st():
     ## As pop st
     ## Dépile le float au top de la pile stack du ALU et l'empile à la pile stack du FPU
     ## --> récupère le float enregistré en rsp et l'empile à la pile stack du FPU
-    s = "finit\n"
-    s += "fld qword [rsp]\n"
+    s = """
+    finit
+    fld qword [rsp]
+    """
     return s
 
 def float_get_st_into_rsp():
@@ -143,18 +137,22 @@ def float_get_st_into_rsp():
     ## Dépile le float enregistré au top de la pile stack du FPU et l'empile dans la pile stack du ALU
     ## --> décrémente rsp pour allouer une nouvelle case à la pile stack du ALU
     ## --> lit le float enregistré en st(0) et le met en rsp
-    s = "sub rsp, 8\n"
-    s += "fst qword [rsp]\n"
+    s = """
+    sub rsp, 8
+    fst qword [rsp]
+    """
     return s
 
 def float_transfer_st_to_storage():
     ## As mov [rsp], st
     ## Dépile le float au top de la pile stack du FPU et le sauvegarde dans la case de la pile stack ALU
-    ##  dont l'addresse est désignée par la valeur au top de la pile ALU
-    ## --> Récupère (sans dépiler rsp) l'addresse de stockage et l'enregistre comme valeur de rbx
-    ## --> Dépile la pile stack du FPU et sauvegarde le float récupérée à l'addresse enregistrée dans rbx
-    s = "mov rbx, [rsp]\n"
-    s += "fstp qword [rbx]\n"
+    ##  dont l'adresse est désignée par la valeur au top de la pile ALU
+    ## --> Récupère (sans dépiler rsp) l'adresse de stockage et l'enregistre comme valeur de rbx
+    ## --> Dépile la pile stack du FPU et sauvegarde le float récupérée à l'adresse enregistrée dans rbx
+    s = """
+    mov rbx, [rsp]
+    fstp qword [rbx]
+    """
     return s
 
 def float_print_from_st():
@@ -198,90 +196,112 @@ def quat_get_in_st_from_tree_exp(e):
     ## --> met à jour st(0) par rapport à la coordonnée enregistrée dans [rsp]
     ## Puis incrémnte rsp de 32 pour libérer la place qui a été allouée aux coordonnées au top de la pile stack du ALU
     r,i,j,k = [e.children[f].value for f in range(4)]
-    s = "finit\n"
-    s += f"mov rax, __float64__({k})\n"
-    s += "push rax\n"
-    s += "fld qword [rsp]\n"
+    s = f"""
+    finit
+    mov rax, __float64__({k})
+    push rax
+    fld qword [rsp]
+    """
 
-    s += f"mov rax, __float64__({j})\n"
-    s += "push rax\n"
-    s += "fld qword [rsp]\n"
+    s += f"""
+    mov rax, __float64__({j})
+    push rax
+    fld qword [rsp]
+    """
 
-    s += f"mov rax, __float64__({i})\n"
-    s += "push rax\n"
-    s += "fld qword [rsp]\n"
+    s += f"""
+    mov rax, __float64__({i})
+    push rax
+    fld qword [rsp]
+    """
 
-    s += f"mov rax, __float64__({r})\n"
-    s += "push rax\n"
-    s += "fld qword [rsp]\n"
+    s += f"""
+    mov rax, __float64__({r})
+    push rax
+    fld qword [rsp]
+    """
 
-    s += "add rsp, 32\n"
+    s += """
+    add rsp, 32
+    """
     return s
 
 def quat_transfer_st_to_storage():
     ## As mov [rsp], st
     ## Dépile le quaternion au top de la pile stack du FPU et le sauvegarde dans la case de la pile stack ALU
-    ##  dont l'addresse est désignée par la valeur au top de la pile ALU
-    ## --> Récupère (sans dépiler rsp) l'addresse de stockage et l'enregistre comme valeur de rbx
+    ##  dont l'adresse est désignée par la valeur au top de la pile ALU
+    ## --> Récupère (sans dépiler rsp) l'adresse de stockage et l'enregistre comme valeur de rbx
     ## --> dépile la partie réelle enregistrée en st(0) et l'enregistre en [rbx]
     ## --> dépile la coordonnée i enregistrée autrefois en st(1) et l'enregistre en [rbx + 8]
     ## --> dépile la coordonnée j enregistrée autrefois en st(2) et l'enregistre en [rbx + 16]
     ## --> dépile la coordonnée k enregistrée autrefois en st(3) et l'enregistre en [rbx + 24]
-    s = "mov rbx, [rsp]\n"
-    s += "fstp qword [rbx]\n"
-    s += "fstp qword [rbx + 8]\n"
-    s += "fstp qword [rbx + 16]\n"
-    s += "fstp qword [rbx + 24]\n"
+    s = f"""
+    mov rbx, [rsp]
+    fstp qword [rbx]
+    fstp qword [rbx + 8]
+    fstp qword [rbx + 16]
+    fstp qword [rbx + 24]
+    """
 
 def quat_get_in_st_from_storage():
     ## As mov st, [rsp]
     ## Li le quaternion sauvegardé à l'adresse indiqué par [rsp] et l'empile dans la pile stack du FPU
-    ## --> Récupère (sans dépiler rsp) l'addresse de stockage et l'enregistre comme valeur de rbx
+    ## --> Récupère (sans dépiler rsp) l'adresse de stockage et l'enregistre comme valeur de rbx
     ## --> met à jour st(0) (qui deviendra st(3)) par rapport à la coordonnée k enregistrée dans [rbx + 24]
     ## --> met à jour st(0) (qui deviendra st(2)) par rapport à la coordonnée j enregistrée dans [rbx + 16]
     ## --> met à jour st(0) (qui deviendra st(1)) par rapport à la coordonnée i enregistrée dans [rbx + 8]
     ## --> met à jour st(0) par rapport à la partie réelle enregistrée dans [rbx]
-    s = "mov rbx, [rsp]\n"
-    s += "finit\n"
-    s += "fld qword [rbx + 24]\n"
-    s += "fld qword [rbx + 16]\n"
-    s += "fld qword [rbx + 8]\n"
-    s += "fld qword [rbx]\n"
+    s = f"""
+    mov rbx, [rsp]
+    finit
+    fld qword [rbx + 24]
+    fld qword [rbx + 16]
+    fld qword [rbx + 8]
+    fld qword [rbx]
+    """
     return s
 
 def quat_print_from_st():
     # Print un quaternion enregistré dans la pile stack du FPU (et le dépile)
-    s = "mov rdi, partie_reelle\n"
-    s += "sub rsp, 8\n"
-    s += "fstp qword [rsp]\n"
-    s += "movq xmm0, qword [rsp]\n"
-    s += "add rsp, 8\n"
-    s += "mov rax, 1\n"
-    s += "call printf\n"
+    s = f"""
+    mov rdi, partie_reelle
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    """
 
-    s += "mov rdi, coord_i\n"
-    s += "sub rsp, 8\n"
-    s += "fstp qword [rsp]\n"
-    s += "movq xmm0, qword [rsp]\n"
-    s += "add rsp, 8\n"
-    s += "mov rax, 1\n"
-    s += "call printf\n"
+    s += f"""
+    mov rdi, coord_i
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    """
 
-    s += "mov rdi, coord_j\n"
-    s += "sub rsp, 8\n"
-    s += "fstp qword [rsp]\n"
-    s += "movq xmm0, qword [rsp]\n"
-    s += "add rsp, 8\n"
-    s += "mov rax, 1\n"
-    s += "call printf\n"
+    s += f"""
+    mov rdi, coord_j
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    """
 
-    s += "mov rdi, coord_k\n"
-    s += "sub rsp, 8\n"
-    s += "fstp qword [rsp]\n"
-    s += "movq xmm0, qword [rsp]\n"
-    s += "add rsp, 8\n"
-    s += "mov rax, 1\n"
-    s += "call printf\n"
+    s += f"""
+    mov rdi, coord_k
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    """
     
     return s
 
@@ -446,7 +466,13 @@ def type_exp(e):
     elif e.data == "exp_entier":
         return "entier"
     elif e.data == "exp_var":
-        return f"{type_des_variables[e.children[0].value]}"
+        try:
+            return f"{type_des_variables[e.children[0].value]}"
+        except KeyError:
+            # La variable n'a pas été assignée avant d'être utilisée dans une expression
+            # c'est donc que la variable a été donnée en argument
+            # pour le moment les seuls arguments possibles sont des entiers (TODO)
+            return "entier"    
     elif e.data == "exp_opbin":
         return type_exp(e.children[0])
     elif e.data == "exp_par":
@@ -470,7 +496,6 @@ def asm_exp(e):
         return f"mov rax, {e.children[0].value}\n"
 
     elif e.data == "exp_float":
-        # Enregistre la valeur du float dans rax puis
         # Enregistre le float au top de la pile stack du FPU
         return float_get_in_st_from_tree_exp(e)
 
@@ -478,7 +503,7 @@ def asm_exp(e):
         type_var = type_des_variables[e.children[0].value]
         position_var = positions_des_variables[e.children[0].value]
 
-        if(type_var == "entier"):
+        if type_var == "entier":
             ## Lit dans le dictionnaire des adresses des variables l'adresse de la variable
             ##   pour pouvoir obtenir la valeur de la variable et l'enregistrer dans rax
             return f"""
@@ -487,32 +512,26 @@ def asm_exp(e):
             mov rax, [rax]
             """
 
-        elif(type_var == "float"):
+        elif type_var == "float":
             ## Lit le float enregistré à l'adresse de la variable et l'empile au top de la pile stack du FPU
-            ## Enregistre également la valeur dans rax
             s = f"""
             mov rax, rbp
             sub rax, {position_var}
             push rax
             {float_get_rsp_into_st()}
-            mov rax, [rsp]
             """
             return s
 
         elif(type_var == "quat"):
             ## Enregistre les coordonnées du quaternion désigné par la variable dans la pile stack du FPU :
-            s = ""
-            # Stockage de l'adresse du quaternion au top de la pile stack du ALU
-            s += f"""
+            s = f"""
             mov rax, rbp
             sub rax, {position_var}
             push rax
-            """
-            # Empile au top de la pile stack du FPU les coordonées du quaternion enregistré à l'adresse indiquée
-            s += f"""
             {quat_get_in_st_from_storage()}
             """
             return s
+        
         else:
             return "Cas non traité"
 
@@ -520,7 +539,8 @@ def asm_exp(e):
         return asm_exp(e.children[0])
 
     elif e.data == "exp_opbin":
-        type_op = type_exp(e.children[0]) # On ne peut effectuer des opérations binaires que sur des objets de même type !
+        type_op = type_exp(e.children[0]) 
+        # On ne peut effectuer des opérations binaires que sur des objets de même type !
 
         if(type_op == "entier"):
             E1 = asm_exp(e.children[0])
@@ -532,25 +552,20 @@ def asm_exp(e):
             pop rbx
             {op[e.children[1].value]} rax, rbx
             """
+        
         elif(type_op == "float"):
             ## Calcule le résultat de l'opération binaire sur les float 
             ##  et enregistre le résultat dans st(0)
-            s = ""
-            # Calcule le float résultat de l'expression 1 et l'empile en st(0)
+            # --> calcule le float résultat de l'expression 1 et l'empile en st(0)
+            # --> calcule le float résultat de l'expression 2 et l'empile en st(0)
+            # --> E1 devient st(1)
             E1 = asm_exp(e.children[0])
-            # Calcule le float résultat de l'expression 2 et l'empile en st(0)
-            # E1 devient st(1)
             E2 = asm_exp(e.children[2])
-            # Calcule st1 = st1 op_float st0 et pop st(0) donc le résultat devient le top de la pile stack du FPU
-            resultat = f"{op_float[e.children[1].value]} st1, st0"
-            # De plus on enregistre le float résultat dans rax
-            rax = float_get_st_into_rsp()
-            rax += "pop rax"
-            s += f"""
+            # --> calcule st1 = st1 op_float st0 et pop st(0) donc le résultat devient le top de la pile stack du FPU
+            s = f"""
             {E1}
             {E2}
-            {resultat}
-            {rax}
+            {op_float[e.children[1].value]} st1, st0
             """
             return s
         
@@ -565,56 +580,72 @@ def asm_exp(e):
                 return quat_mult(e)
             else:
                 return "Cas non traité"
+        
+        else:
+            return "Cas non traité"
 
     elif e.data == "exp_reel":
         # Le quaternion résultat de l'expression est enregistré au top de la pile stack du FPU
-        s = asm_exp(e.children[0])
+        E = asm_exp(e.children[0])
         # On enregistre sa partie réelle au top de la pile stack FPU
         #   : elle y est déjà
-        # Comme le résultat est un float on enregistre également le float dans rax
-        s += float_get_st_into_rsp()
-        s += "pop rax\n"
+        s = f"""
+        {E}
+        """
         return s
+
     elif e.data == "exp_i":
         # Le quaternion résultat de l'expression est enregistré au top de la pile stack du FPU
-        s = asm_exp(e.children[0])
+        E = asm_exp(e.children[0])
         # On enregistre sa coordonnée i au top de la pile stack FPU : on dépile une fois
-        # Et puis on lit sa valeur pour l'enregistrer dans rax
-        s += "sub rsp, 8\n"
-        s += "fstp qword [rsp]\n"
-        s += float_get_st_into_rsp()
-        s += "pop rax\n"
+        s = f"""
+        {E}
+        sub rsp, 8
+        fstp qword [rsp]
+        add rsp, 8
+        """
         return s
+
     elif e.data == "exp_j":
         # Le quaternion résultat de l'expression est enregistré au top de la pile stack du FPU
-        s = asm_exp(e.children[0])
+        E = asm_exp(e.children[0])
         # On enregistre sa coordonnée j au top de la pile stack FPU : on dépile 2 fois
         # Et puis on lit sa valeur pour l'enregistrer dans rax
-        s += "sub rsp, 8\n"
-        s += "fstp qword [rsp]\n"
-        s += "fstp qword [rsp]\n"
-        s += float_get_st_into_rsp()
-        s += "pop rax\n"
+        s = f"""
+        {E}
+        sub rsp, 8
+        fstp qword [rsp]
+        fstp qword [rsp]
+        add rsp, 8
+        """
         return s
+   
     elif e.data == "exp_k":
         # Le quaternion résultat de l'expression est enregistré au top de la pile stack du FPU
-        s = asm_exp(e.children[0])
+        E = asm_exp(e.children[0])
         # On enregistre sa coordonnée k au top de la pile stack FPU : on dépile 3 fois
         # Et puis on lit sa valeur pour l'enregistrer dans rax
-        s += "sub rsp, 8\n"
-        s += "fstp qword [rsp]\n"
-        s += "fstp qword [rsp]\n"
-        s += "fstp qword [rsp]\n"
-        s += float_get_st_into_rsp()
-        s += "pop rax\n"
+        s = f"""
+        {E}
+        sub rsp, 8
+        fstp qword [rsp]
+        fstp qword [rsp]
+        fstp qword [rsp]
+        add rsp, 8
+        """
         return s
+
     elif e.data == "exp_im":
         # Le quaternion résultat de l'expression est enregistré au top de la pile stack du FPU
-        s = asm_exp(e.children[0])
+        E = asm_exp(e.children[0])
         # Le résultat que l'on retourne est un quaternion sans sa partie réelle, donc on
         #   annule simplement sa partie réelle, enregistrée en st(0)
-        s += "fsub st0, st0\n"
+        s = f"""
+        {E}
+        fsub st0, st0
+        """
         return s
+
     else :
         return "Cas non traité"
 
@@ -643,6 +674,7 @@ def asm_com(c):
             sub rbx, {adresse}
             mov [rbx], rax
             """
+        
         elif type_var == "float":
             # Stockage du float résultat de l'expression dans la pile stack du FPU
             exp = asm_exp(c.children[1])
@@ -676,6 +708,7 @@ def asm_com(c):
             {stack}
             """
             return s
+        
         else:
             return "Cas non traité"
 
@@ -715,6 +748,7 @@ def asm_com(c):
             mov rsi, rax
             call printf
             """
+        
         elif(type_print == "float"):
             s = ""
             calcul = asm_exp(c.children[0])
@@ -731,8 +765,10 @@ def asm_com(c):
             {quat_print_from_st()}
             """
             return s
+        
         else:
             return "Cas non traité"
+    
     else :
         return "Cas non traité"
 
@@ -743,17 +779,22 @@ def asm_prg(p):
     f = open("moule.asm")
     moule = f.read()
     
-    ## Création du disctionnaire des adresses des variables
-    variables = [v for v in vars_prg(p)]
-
+    ## Création du dictionnaire des adresses des variables
     global positions_des_variables
     positions_des_variables = {}
+
+    variables = [v for v in vars_prg(p)]
+    print(variables)
     for i in range(len(variables)) :
         positions_des_variables[f"{variables[i]}"]= (i+1)*32
-    
-    # TODO : vérifier si la déclaration des variables ne change pas
-    D = "\n".join([f"{v} : dq 0" for v in vars_prg(p)])
-    moule = moule.replace("DECL_VARS", D)
+    print(positions_des_variables)
+
+    global type_des_variables
+    type_des_variables = {}
+
+    # TODO : vérifier si la déclaration des variables ne sert vraiment plus à rien
+    #D = "\n".join([f"{v} : dq 0" for v in vars_prg(p)])
+    #moule = moule.replace("DECL_VARS", D)
     
     # TODO : pour le moment on ne peut mettre en argument que des entiers
     s = ""
@@ -765,9 +806,9 @@ def asm_prg(p):
         mov rdi, [rbx + { 8*(i+1)}]
         xor rax, rax
         call atoi
-        mov rbx, rbp
-        sub rbx, {adresse}
-        mov [rbx], rax
+        mov rcx, rbp
+        sub rcx, {adresse}
+        mov [rcx], rax
         """
         s = s + e
     moule = moule.replace("INIT_VARS", s)
@@ -775,23 +816,26 @@ def asm_prg(p):
     C = asm_bcom(p.children[1])
     moule = moule.replace("BODY", C)
     
+
     E = asm_exp(p.children[2])
     type_ret = type_exp(p.children[2])
+
     if type_ret == "entier":
-        print = f"""
+        print_ret = f"""
         mov rdi, entier_print
         mov rsi, rax
         call printf
         """
     elif type_ret == "float":
-        print = float_print_from_st()
+        print_ret = float_print_from_st()
     elif type_ret == "quat":
-        print = quat_print_from_st()
+        print_ret = quat_print_from_st()
     else:
-        print = "Cas non traité"
+        print_ret = "Cas non traité"
+    
     s = f"""
     {E}
-    {print}
+    {print_ret}
     """
     moule = moule.replace("RETURN", s)
 
@@ -838,16 +882,22 @@ def vars_prg(p):
     return L | C | R
 
 
-#### TESTS ####
+#######################
+######## TESTS ########
+#######################
 
 ast = grammaire.parse("""
-    main(){
+    main(z){
         y = 3.1;
         print(y)
-        return(1);
+        z = z + 2;
+        return(z);
     }
 """)
+
+print(pp_prg(ast))
 asm = asm_prg(ast)
 f = open("quat.asm", "w")
 f.write(asm)
 f.close()
+print(type_des_variables)

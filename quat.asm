@@ -9,7 +9,7 @@ coord_j : db "%g j +", 0
 coord_k : db "%g k +", 10, 0
 argc : dq 0
 argv : dq 0
-y : dq 0
+;DECL_VARS
 
 section .text
 global main
@@ -19,6 +19,14 @@ main :
     mov [argc], rdi
     mov [argv], rsi
     
+        mov rbx, [argv]
+        mov rdi, [rbx + 8]
+        xor rax, rax
+        call atoi
+        mov rcx, rbp
+        sub rcx, 64
+        mov [rcx], rax
+        
     
             
     finit
@@ -31,18 +39,19 @@ main :
             mov rax, rbp
             sub rax, 32
             push rax
-            mov rbx, [rsp]
-fstp qword [rbx]
-
+            
+    mov rbx, [rsp]
+    fstp qword [rbx]
+    
             
             
             mov rax, rbp
             sub rax, 32
             push rax
-            finit
-fld qword [rsp]
-
-            mov rax, [rsp]
+            
+    finit
+    fld qword [rsp]
+    
             
             
     mov rdi, float_print
@@ -54,9 +63,28 @@ fld qword [rsp]
     call printf
     
             
-    
-    mov rax, 1
+            
+            mov rax, 2
 
+            push rax
+            
+            mov rax, rbp
+            sub rax, 64
+            mov rax, [rax]
+            
+            pop rbx
+            add rax, rbx
+            
+            mov rbx, rbp
+            sub rbx, 64
+            mov [rbx], rax
+            
+    
+    
+            mov rax, rbp
+            sub rax, 64
+            mov rax, [rax]
+            
     
         mov rdi, entier_print
         mov rsi, rax
