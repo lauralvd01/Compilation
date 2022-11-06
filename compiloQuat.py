@@ -128,14 +128,6 @@ def float_get_in_st_from_tree_exp(e):
     s += "add rsp, 8"
     return s
 
-def float_transfer_rax_to_st():
-    ## As mov st(0), rax
-    ## Empile le float, enregistré par le qword rax, dans la pile Stack du FPU 
-    ## --> met à jour st(0) par rapport à rax
-    s = "finit\n"
-    s += "fld qword rax\n"
-    return s
-
 def float_get_rsp_into_st():
     ## As pop st
     ## Dépile le float au top de la pile stack du ALU et l'empile à la pile stack du FPU
@@ -709,16 +701,17 @@ def asm_prg(p):
     D = "\n".join([f"{v} : dq 0" for v in vars_prg(p)])
     moule = moule.replace("DECL_VARS", D)
     
-    # TODO : l'initialisation va forcément changer
+    # TODO : pour le moment on ne peut mettre en argument que des entiers
     s = ""
     for i in range(len(p.children[0].children)):
         v = p.children[0].children[i].value
+        adresse = positions_des_variables[v]
         e = f"""
         mov rbx, [argv]
         mov rdi, [rbx + { 8*(i+1)}]
         xor rax, rax
         call atoi
-        mov [{v}], rax
+        mov [{adresse}], rax
         """
         s = s + e
     moule = moule.replace("INIT_VARS", s)
@@ -728,7 +721,7 @@ def asm_prg(p):
     
     E = asm_exp(p.children[2])
     moule = moule.replace("RETURN", E)
-       
+
     return moule
 
 
