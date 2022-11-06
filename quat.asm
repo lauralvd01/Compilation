@@ -27,15 +27,23 @@ main :
         mov [rbp - 32], rax
         
     
-            mov rax, 2
+            finit
+mov rax, __float64__(2.)
+push rax
+fld qword [rsp]
+add rsp, 8
 
             mov [rbp - 64], rax        
             
-    mov rax, [rbp - 64]
+    
+    mov rax, 1
 
-    mov rdi, entier_print
-    mov rsi, rax
-    call printf
+    
+        mov rdi, entier_print
+        mov rsi, rax
+        call printf
+        
+    
     mov rsp, rbp
     pop rbp
     ret

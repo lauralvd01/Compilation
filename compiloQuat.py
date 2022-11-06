@@ -123,9 +123,9 @@ def float_get_in_st_from_tree_exp(e):
     ## Incrémnte rsp de 8 pour libérer la place qui a été allouée au float au top de la pile stack du ALU
     s = "finit\n"
     s += f"mov rax, __float64__({e.children[0].value})\n"
-    s += "push rax"
-    s += "fld qword [rsp]"
-    s += "add rsp, 8"
+    s += "push rax\n"
+    s += "fld qword [rsp]\n"
+    s += "add rsp, 8\n"
     return s
 
 def float_get_rsp_into_st():
@@ -620,13 +620,16 @@ def asm_com(c):
             """
 
         elif(type_var == "quat"):
-            s = ""
             # Stockage du quaternion résultat de l'expression dans la pile stack du FPU
-            s += asm_exp(c.children[1])
+            exp = asm_exp(c.children[1])
             # Stockage de l'adresse du quaternion au top de la pile stack du ALU
-            s += f"push {adresse}\n"
+            stock = f"push {adresse}\n"
             # Enregistrement des coordonnées du quaternion dans la pile stack du ALU à l'adresse prévue pour la variable
-            s += quat_transfer_st_to_storage()
+            stock += quat_transfer_st_to_storage()
+            s = f"""
+            {exp}
+            {stock}
+            """
         else:
             return "Cas non traité"
 
@@ -670,12 +673,16 @@ def asm_com(c):
             s = ""
             calcul = asm_exp(c.children[0])
             print = float_print_from_st()
-            s += calcul + print
+            s += f"""
+            {calcul}
+            {print}
+            """
             return s
         elif(type_print == "quat"):
-            s = ""
-            s += asm_exp(c.children[0])
-            s += quat_print_from_st()
+            s = f"""
+            {asm_exp(c.children[0])}
+            {quat_print_from_st()}
+            """
             return s
         else:
             return "Cas non traité"
@@ -720,7 +727,24 @@ def asm_prg(p):
     moule = moule.replace("BODY", C)
     
     E = asm_exp(p.children[2])
-    moule = moule.replace("RETURN", E)
+    type_ret = type_exp(p.children[2])
+    if type_ret == "entier":
+        print = f"""
+        mov rdi, entier_print
+        mov rsi, rax
+        call printf
+        """
+    elif type_ret == "float":
+        print = float_print_from_st()
+    elif type_ret == "quat":
+        print = quat_print_from_st()
+    else:
+        print = "Cas non traité"
+    s = f"""
+    {E}
+    {print}
+    """
+    moule = moule.replace("RETURN", s)
 
     return moule
 
@@ -769,8 +793,8 @@ def vars_prg(p):
 
 ast = grammaire.parse("""
     main(x){
-        y = 2;
-        return(y);
+        y = 2.;
+        return(1);
     }
 """)
 asm = asm_prg(ast)
