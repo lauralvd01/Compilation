@@ -366,21 +366,119 @@ def quat_mult(e):
     E2 = asm_exp(e.children[0])
     # Calcule le quaternion résultat de l'expression 1 et l'empile au top de la pile stack du FPU
     E1 = asm_exp(e.children[0])
-    # On a alors r1 en st(1), i1 en st(2), j1 en st(3), k1 en st(4), r2 en st(5), i2 en st(6), j2 en st(7) et k2 en st(3)
+    s = f"""
+    {E2}
+    {E1}
+    """
+    # On a alors r1 en st(0), i1 en st(1), j1 en st(2), k1 en st(3), r2 en st(4), i2 en st(5), j2 en st(6) et k2 en st(7)
     
     # Le résultat de (r1 + i1.i + j1.j + k1.k)*(r2 + i2.i + j2.j + k2.k) est
     # r1*r2 - i1*i2 - j1*j2 - k1*k2 +
     # (r1*i2 + i1*r2 + j1*k2 -k1*j2).i +
     # (r1*j2 + j1*r2 + k1*i2 -i1*k2).j +
     # (r1*k2 + k1*r2 + i1*j2 -j1*i2). k
-    s = f"""
-    {E2}
-    {E1}
-    fsub st0,st4
-    fsub st1,st5
-    fsub st2,st6
-    fsub st3,st7
-    """
+
+    # Création de 4 float que l'on empile au top de la pile stack du FPU
+    # --> Ces 4 float serviront pour les calculs de chaque coordonnée
+    # --> Les coordonées des quaternions à multiplier seront donc décalées de 4
+    # --> Chaque coordonnée ainsi calculée sera d'abord sauvegardée et étant empilée à la pile stack du ALU 
+
+    s += "fld st3\n" # Push k1 en st0
+    s += "fld st3\n" # Push j1 en st0
+    s += "fld st3\n" # Push i1 en st0
+    s += "fld st3\n" # Push r1 en st0
+    # On a alors r1 en st(4), i1 en st(5), j1 en st(6), k1 en st(7), r2 en st(8), i2 en st(9), j2 en st(10) et k2 en st(11)
+    
+    ## Calcul de la partie réelle
+    s += "fmul st0,st8\n"
+    s += "fmul st1,st9\n"
+    s += "fmul st2,st10\n"
+    s += "fmul st3,st11\n"
+    s += "fsub st0,st1\n"
+    s += "fsub st0,st2\n"
+    s += "fsub st0,st3\n"
+
+    s += float_get_st_into_rsp()
+
+    # Remise à 0
+    s += "fsub st0,st0\n"
+    s += "fsub st1,st1\n"
+    s += "fsub st2,st2\n"
+    s += "fsub st3,st3\n"
+
+    ## Calcul de la coordonnée i
+    s += "fadd st0,st4\n"
+    s += "fadd st1,st5\n"
+    s += "fadd st2,st6\n"
+    s += "fadd st3,st7\n"
+
+    s += "fmul st0,st9\n"
+    s += "fmul st1,st8\n"
+    s += "fmul st2,st11\n"
+    s += "fmul st3,st10\n"
+    s += "fadd st0,st1\n"
+    s += "fadd st0,st2\n"
+    s += "fsub st0,st3\n"
+
+    s += float_get_st_into_rsp()
+
+    # Remise à 0
+    s += "fsub st0,st0\n"
+    s += "fsub st1,st1\n"
+    s += "fsub st2,st2\n"
+    s += "fsub st3,st3\n"
+
+    ## Calcul de la coordonnée j
+    # (r1*j2 + j1*r2 + k1*i2 -i1*k2).j +
+    s += "fadd st0,st4\n"
+    s += "fadd st1,st6\n"
+    s += "fadd st2,st7\n"
+    s += "fadd st3,st5\n"
+
+    s += "fmul st0,st10\n"
+    s += "fmul st1,st8\n"
+    s += "fmul st2,st9\n"
+    s += "fmul st3,st11\n"
+    s += "fadd st0,st1\n"
+    s += "fadd st0,st2\n"
+    s += "fsub st0,st3\n"
+
+    s += float_get_st_into_rsp()
+
+    # Remise à 0
+    s += "fsub st0,st0\n"
+    s += "fsub st1,st1\n"
+    s += "fsub st2,st2\n"
+    s += "fsub st3,st3\n"
+
+    ## Calcul de la coordonnée k
+    s += "fadd st0,st4\n"
+    s += "fadd st1,st7\n"
+    s += "fadd st2,st5\n"
+    s += "fadd st3,st6\n"
+
+    s += "fmul st0,st11\n"
+    s += "fmul st1,st8\n"
+    s += "fmul st2,st10\n"
+    s += "fmul st3,st9\n"
+    s += "fadd st0,st1\n"
+    s += "fadd st0,st2\n"
+    s += "fsub st0,st3\n"
+
+    s += float_get_st_into_rsp()
+
+    # Vidage de la pile stack du FPU
+    vide = "fstp st0"*12
+    s += vide
+
+    # Empilage des nouvelles coordonnées dans la pile stack du FPU
+    s += "finit\n"
+    s += "fld qword [rsp]\n"
+    s += "fld qword [rsp + 8]\n"
+    s += "fld qword [rsp + 16]\n"
+    s += "fld qword [rsp + 24]\n"
+    s += "add rsp, 32\n"
+
     return s
 
 def type_exp(e):
