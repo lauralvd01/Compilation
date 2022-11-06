@@ -175,57 +175,126 @@ main :
     add rsp, 32
     
     
-    fsubp st4,st0       ; on obtient r1+r2 en st(4) puis on pop donc tout se décale d'un cran
-    fsubp st4,st0       ; on obtient i1+i2 en st(4) puis on pop donc tout se décale d'un cran
-    fsubp st4,st0       ; on obtient j1+j2 en st(4) puis on pop donc tout se décale d'un cran
-    fsubp st4,st0       ; on obtient k1+k2 en st(4) puis on pop donc tout se décale d'un cran
+    sub rsp, 32
+    fstp qword [rsp]        ; enregistre r1
+    fstp qword [rsp + 8]    ; enregistre i1
+    fstp qword [rsp + 16]   ; enregistre j1
+    fstp qword [rsp + 24]   ; enregistre k1
     
-            
-    mov rdi, partie_reelle
+    fld qword [rsp + 24]  ; push k1 en st(0), r2 en st(1), i2 en st(2), j2 en st(3), k2 en st(4)
+    fmul st0,st4
+
+    fld qword [rsp + 16] ; push j1 en st(0), k1*k2 en st(1), r2 en st(2), i2 en st(3), j2 en st(4), k2 en st(5)
+    fmul st0,st4
+    
+    fld qword [rsp + 8] ; push i1 en st(0), j1*j2 en st(1), k1*k2 en st(2), r2 en st(3), i2 en st(4), j2 en st(5), k2 en st(6)
+    fmul st0,st4
+    
+    fld qword [rsp] ; push r1 en st(0), i1*i2 en st(1), j1*j2 en st(2), k1*k2 en st(3), r2 en st(4), i2 en st(5), j2 en st(6), k2 en st(7)
+    fmul st0,st4
+    
+    fsub st0,st1
+    fsub st0,st2
+    fsub st0,st3
+
+    sub rsp, 8
+    fstp qword [rsp]    ; enregistre r1*r2 - i1*i2 - j1*j2 - k1*k2
+
+    sub rsp, 8
+    fstp qword [rsp]    ; dépile i1*i2
+    fstp qword [rsp]    ; on dépile j1*j2
+    fstp qword [rsp]    ; on dépile k1*k2
+    add rsp, 8 
+    
+    fld qword [rsp + 32]  ; push k1 en st(0), r2 en st(1), i2 en st(2), j2 en st(3), k2 en st(4)
+    fmul st0,st3
+
+    fld qword [rsp + 24] ; push j1 en st(0), k1*j2 en st(1), r2 en st(2), i2 en st(3), j2 en st(4), k2 en st(5)
+    fmul st0,st5
+    
+    fld qword [rsp + 16] ; push i1 en st(0), j1*k2 en st(1), k1*j2 en st(2), r2 en st(3), i2 en st(4), j2 en st(5), k2 en st(6)
+    fmul st0,st3
+    
+    fld qword [rsp + 8] ; push r1 en st(0), i1*r2 en st(1), j1*k2 en st(2), k1*j2 en st(3), r2 en st(4), i2 en st(5), j2 en st(6), k2 en st(7)
+    fmul st0,st5
+    
+    fadd st0,st1
+    fadd st0,st2
+    fsub st0,st3
+
+    sub rsp, 8
+    fstp qword [rsp]    ; enregistre r1*i2 - i1*r2 - j1*k2 - k1*j2
+
+    sub rsp, 8
+    fstp qword [rsp]    ; dépile i1*r2
+    fstp qword [rsp]    ; on dépile j1*k2
+    fstp qword [rsp]    ; on dépile k1*j2
+    add rsp, 8 
+    
+    fld qword [rsp + 40]  ; push k1 en st(0), r2 en st(1), i2 en st(2), j2 en st(3), k2 en st(4)
+    fmul st0,st2
+
+    fld qword [rsp + 32] ; push j1 en st(0), k1*i2 en st(1), r2 en st(2), i2 en st(3), j2 en st(4), k2 en st(5)
+    fmul st0,st2
+    
+    fld qword [rsp + 24] ; push i1 en st(0), j1*r2 en st(1), k1*i2 en st(2), r2 en st(3), i2 en st(4), j2 en st(5), k2 en st(6)
+    fmul st0,st6
+    
+    fld qword [rsp + 16] ; push r1 en st(0), i1*k2 en st(1), j1*r2 en st(2), k1*i2 en st(3), r2 en st(4), i2 en st(5), j2 en st(6), k2 en st(7)
+    fmul st0,st6
+    
+    fsub st0,st1
+    fadd st0,st2
+    fadd st0,st3
+
+    sub rsp, 8
+    fstp qword [rsp]    ; enregistre r1*j2 - i1*k2 - j1*r2 - k1*i2
+
+    sub rsp, 8
+    fstp qword [rsp]    ; dépile i1*k2
+    fstp qword [rsp]    ; on dépile j1*r2
+    fstp qword [rsp]    ; on dépile k1*i2
+    add rsp, 8 
+    
+    fld qword [rsp + 48]  ; push k1 en st(0), r2 en st(1), i2 en st(2), j2 en st(3), k2 en st(4)
+    fmul st0,st1
+
+    fld qword [rsp + 40] ; push j1 en st(0), k1*r2 en st(1), r2 en st(2), i2 en st(3), j2 en st(4), k2 en st(5)
+    fmul st0,st3
+    
+    fld qword [rsp + 32] ; push i1 en st(0), j1*i2 en st(1), k1*r2 en st(2), r2 en st(3), i2 en st(4), j2 en st(5), k2 en st(6)
+    fmul st0,st5
+    
+    fld qword [rsp + 24] ; push r1 en st(0), i1*j2 en st(1), j1*i2 en st(2), k1*r2 en st(3), r2 en st(4), i2 en st(5), j2 en st(6), k2 en st(7)
+    fmul st0,st7
+    
+    fadd st0,st1
+    fsub st0,st2
+    fadd st0,st3
+
+    sub rsp, 8
+    fstp qword [rsp]    ; enregistre r1*k2 - i1*j2 - j1*i2 - k1*r2
+
+    sub rsp, 8
+    fstp qword [rsp]    ; dépile i1*j2
+    fstp qword [rsp]    ; on dépile j1*i2
+    fstp qword [rsp]    ; on dépile k1*r2
+    add rsp, 8 
+    
     sub rsp, 8
     fstp qword [rsp]
-    movq xmm0, qword [rsp]
-    add rsp, 8
-    mov rax, 1
-    call printf
-    
-    mov rdi, coord_i
-    sub rsp, 8
     fstp qword [rsp]
-    movq xmm0, qword [rsp]
-    add rsp, 8
-    mov rax, 1
-    call printf
-    
-    mov rdi, coord_j
-    sub rsp, 8
     fstp qword [rsp]
-    movq xmm0, qword [rsp]
-    add rsp, 8
-    mov rax, 1
-    call printf
-    
-    mov rdi, coord_k
-    sub rsp, 8
     fstp qword [rsp]
-    movq xmm0, qword [rsp]
     add rsp, 8
-    mov rax, 1
-    call printf
     
-            
-            
-            mov rax, rbp
-            sub rax, 32
-            push rax
-            
-    mov rbx, [rsp]
-    fld qword [rbx + 24]
-    fld qword [rbx + 16]
-    fld qword [rbx + 8]
-    fld qword [rbx]
+    fld qword [rsp]         ; empilage de la coordonnée k
+    fld qword [rsp + 8]     ; empilage de la coordonnée j
+    fld qword [rsp + 16]    ; empilage de la coordonnée i
+    fld qword [rsp + 24]    ; empilage de la partie réelle
     
-            
+    add rsp, 64     ; vidage de la pile stack du ALU des float enregistrés pour les calculs
+    
             
     mov rdi, partie_reelle
     sub rsp, 8

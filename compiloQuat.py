@@ -347,112 +347,157 @@ def quat_mult(e):
     """
     # On a alors r1 en st(0), i1 en st(1), j1 en st(2), k1 en st(3), r2 en st(4), i2 en st(5), j2 en st(6) et k2 en st(7)
     
+    
     # Le résultat de (r1 + i1.i + j1.j + k1.k)*(r2 + i2.i + j2.j + k2.k) est
     # r1*r2 - i1*i2 - j1*j2 - k1*k2 +
-    # (r1*i2 + i1*r2 + j1*k2 -k1*j2).i +
-    # (r1*j2 + j1*r2 + k1*i2 -i1*k2).j +
-    # (r1*k2 + k1*r2 + i1*j2 -j1*i2). k
+    # (r1*i2 + i1*r2 + j1*k2 - k1*j2).i +
+    # (r1*j2 - i1*k2 + j1*r2 + k1*i2).j +
+    # (r1*k2 + i1*j2 - j1*i2 + k1*r2). k
 
-    # Création de 4 float que l'on empile au top de la pile stack du FPU
-    # --> Ces 4 float serviront pour les calculs de chaque coordonnée
-    # --> Les coordonées des quaternions à multiplier seront donc décalées de 4
-    # --> Chaque coordonnée ainsi calculée sera d'abord sauvegardée et étant empilée à la pile stack du ALU 
+    ## On sauvegarde les coordonnées du quaternion résultat 1 au top de la pile stack du ALU
+    ## On peut ensuite empiler 4 nouveaux float, utilisés pour faire les calculs, au top de la pile stack du FPU
 
-    s += "fld st3\n" # Push k1 en st0
-    s += "fld st3\n" # Push j1 en st0
-    s += "fld st3\n" # Push i1 en st0
-    s += "fld st3\n" # Push r1 en st0
-    # On a alors r1 en st(4), i1 en st(5), j1 en st(6), k1 en st(7), r2 en st(8), i2 en st(9), j2 en st(10) et k2 en st(11)
+    s += f"""
+    sub rsp, 32
+    fstp qword [rsp]        ; enregistre r1
+    fstp qword [rsp + 8]    ; enregistre i1
+    fstp qword [rsp + 16]   ; enregistre j1
+    fstp qword [rsp + 24]   ; enregistre k1
+    """
+    # On a alors k1 en st(0), r2 en st(1), i2 en st(2), j2 en st(3) et k2 en st(4)
     
     ## Calcul de la partie réelle
-    s += "fmul st0,st8\n"
-    s += "fmul st1,st9\n"
-    s += "fmul st2,st10\n"
-    s += "fmul st3,st11\n"
-    s += "fsub st0,st1\n"
-    s += "fsub st0,st2\n"
-    s += "fsub st0,st3\n"
+    s += f"""
+    fld qword [rsp + 24]  ; push k1 en st(0), r2 en st(1), i2 en st(2), j2 en st(3), k2 en st(4)
+    fmul st0,st4
 
-    s += float_get_st_into_rsp()
+    fld qword [rsp + 16] ; push j1 en st(0), k1*k2 en st(1), r2 en st(2), i2 en st(3), j2 en st(4), k2 en st(5)
+    fmul st0,st4
+    
+    fld qword [rsp + 8] ; push i1 en st(0), j1*j2 en st(1), k1*k2 en st(2), r2 en st(3), i2 en st(4), j2 en st(5), k2 en st(6)
+    fmul st0,st4
+    
+    fld qword [rsp] ; push r1 en st(0), i1*i2 en st(1), j1*j2 en st(2), k1*k2 en st(3), r2 en st(4), i2 en st(5), j2 en st(6), k2 en st(7)
+    fmul st0,st4
+    
+    fsub st0,st1
+    fsub st0,st2
+    fsub st0,st3
 
-    # Remise à 0
-    s += "fsub st0,st0\n"
-    s += "fsub st1,st1\n"
-    s += "fsub st2,st2\n"
-    s += "fsub st3,st3\n"
+    sub rsp, 8
+    fstp qword [rsp]    ; enregistre r1*r2 - i1*i2 - j1*j2 - k1*k2
+
+    sub rsp, 8
+    fstp qword [rsp]    ; dépile i1*i2
+    fstp qword [rsp]    ; on dépile j1*j2
+    fstp qword [rsp]    ; on dépile k1*k2
+    add rsp, 8 
+    """
 
     ## Calcul de la coordonnée i
-    s += "fadd st0,st4\n"
-    s += "fadd st1,st5\n"
-    s += "fadd st2,st6\n"
-    s += "fadd st3,st7\n"
+    s += f"""
+    fld qword [rsp + 32]  ; push k1 en st(0), r2 en st(1), i2 en st(2), j2 en st(3), k2 en st(4)
+    fmul st0,st3
 
-    s += "fmul st0,st9\n"
-    s += "fmul st1,st8\n"
-    s += "fmul st2,st11\n"
-    s += "fmul st3,st10\n"
-    s += "fadd st0,st1\n"
-    s += "fadd st0,st2\n"
-    s += "fsub st0,st3\n"
+    fld qword [rsp + 24] ; push j1 en st(0), k1*j2 en st(1), r2 en st(2), i2 en st(3), j2 en st(4), k2 en st(5)
+    fmul st0,st5
+    
+    fld qword [rsp + 16] ; push i1 en st(0), j1*k2 en st(1), k1*j2 en st(2), r2 en st(3), i2 en st(4), j2 en st(5), k2 en st(6)
+    fmul st0,st3
+    
+    fld qword [rsp + 8] ; push r1 en st(0), i1*r2 en st(1), j1*k2 en st(2), k1*j2 en st(3), r2 en st(4), i2 en st(5), j2 en st(6), k2 en st(7)
+    fmul st0,st5
+    
+    fadd st0,st1
+    fadd st0,st2
+    fsub st0,st3
 
-    s += float_get_st_into_rsp()
+    sub rsp, 8
+    fstp qword [rsp]    ; enregistre r1*i2 - i1*r2 - j1*k2 - k1*j2
 
-    # Remise à 0
-    s += "fsub st0,st0\n"
-    s += "fsub st1,st1\n"
-    s += "fsub st2,st2\n"
-    s += "fsub st3,st3\n"
-
+    sub rsp, 8
+    fstp qword [rsp]    ; dépile i1*r2
+    fstp qword [rsp]    ; on dépile j1*k2
+    fstp qword [rsp]    ; on dépile k1*j2
+    add rsp, 8 
+    """
+    
     ## Calcul de la coordonnée j
-    # (r1*j2 + j1*r2 + k1*i2 -i1*k2).j +
-    s += "fadd st0,st4\n"
-    s += "fadd st1,st6\n"
-    s += "fadd st2,st7\n"
-    s += "fadd st3,st5\n"
+    s += f"""
+    fld qword [rsp + 40]  ; push k1 en st(0), r2 en st(1), i2 en st(2), j2 en st(3), k2 en st(4)
+    fmul st0,st2
 
-    s += "fmul st0,st10\n"
-    s += "fmul st1,st8\n"
-    s += "fmul st2,st9\n"
-    s += "fmul st3,st11\n"
-    s += "fadd st0,st1\n"
-    s += "fadd st0,st2\n"
-    s += "fsub st0,st3\n"
+    fld qword [rsp + 32] ; push j1 en st(0), k1*i2 en st(1), r2 en st(2), i2 en st(3), j2 en st(4), k2 en st(5)
+    fmul st0,st2
+    
+    fld qword [rsp + 24] ; push i1 en st(0), j1*r2 en st(1), k1*i2 en st(2), r2 en st(3), i2 en st(4), j2 en st(5), k2 en st(6)
+    fmul st0,st6
+    
+    fld qword [rsp + 16] ; push r1 en st(0), i1*k2 en st(1), j1*r2 en st(2), k1*i2 en st(3), r2 en st(4), i2 en st(5), j2 en st(6), k2 en st(7)
+    fmul st0,st6
+    
+    fsub st0,st1
+    fadd st0,st2
+    fadd st0,st3
 
-    s += float_get_st_into_rsp()
+    sub rsp, 8
+    fstp qword [rsp]    ; enregistre r1*j2 - i1*k2 - j1*r2 - k1*i2
 
-    # Remise à 0
-    s += "fsub st0,st0\n"
-    s += "fsub st1,st1\n"
-    s += "fsub st2,st2\n"
-    s += "fsub st3,st3\n"
-
+    sub rsp, 8
+    fstp qword [rsp]    ; dépile i1*k2
+    fstp qword [rsp]    ; on dépile j1*r2
+    fstp qword [rsp]    ; on dépile k1*i2
+    add rsp, 8 
+    """
+    
     ## Calcul de la coordonnée k
-    s += "fadd st0,st4\n"
-    s += "fadd st1,st7\n"
-    s += "fadd st2,st5\n"
-    s += "fadd st3,st6\n"
+    # (r1*k2 + i1*j2 - j1*i2 + k1*r2). k
+    s += f"""
+    fld qword [rsp + 48]  ; push k1 en st(0), r2 en st(1), i2 en st(2), j2 en st(3), k2 en st(4)
+    fmul st0,st1
 
-    s += "fmul st0,st11\n"
-    s += "fmul st1,st8\n"
-    s += "fmul st2,st10\n"
-    s += "fmul st3,st9\n"
-    s += "fadd st0,st1\n"
-    s += "fadd st0,st2\n"
-    s += "fsub st0,st3\n"
+    fld qword [rsp + 40] ; push j1 en st(0), k1*r2 en st(1), r2 en st(2), i2 en st(3), j2 en st(4), k2 en st(5)
+    fmul st0,st3
+    
+    fld qword [rsp + 32] ; push i1 en st(0), j1*i2 en st(1), k1*r2 en st(2), r2 en st(3), i2 en st(4), j2 en st(5), k2 en st(6)
+    fmul st0,st5
+    
+    fld qword [rsp + 24] ; push r1 en st(0), i1*j2 en st(1), j1*i2 en st(2), k1*r2 en st(3), r2 en st(4), i2 en st(5), j2 en st(6), k2 en st(7)
+    fmul st0,st7
+    
+    fadd st0,st1
+    fsub st0,st2
+    fadd st0,st3
 
-    s += float_get_st_into_rsp()
+    sub rsp, 8
+    fstp qword [rsp]    ; enregistre r1*k2 - i1*j2 - j1*i2 - k1*r2
+
+    sub rsp, 8
+    fstp qword [rsp]    ; dépile i1*j2
+    fstp qword [rsp]    ; on dépile j1*i2
+    fstp qword [rsp]    ; on dépile k1*r2
+    add rsp, 8 
+    """
 
     # Vidage de la pile stack du FPU
-    vide = "fstp st0"*12
-    s += vide
+    s += f"""
+    sub rsp, 8
+    fstp qword [rsp]
+    fstp qword [rsp]
+    fstp qword [rsp]
+    fstp qword [rsp]
+    add rsp, 8
+    """
 
     # Empilage des nouvelles coordonnées dans la pile stack du FPU
-    s += "fld qword [rsp]\n"
-    s += "fld qword [rsp + 8]\n"
-    s += "fld qword [rsp + 16]\n"
-    s += "fld qword [rsp + 24]\n"
-    s += "add rsp, 32\n"
-
+    s += """
+    fld qword [rsp]         ; empilage de la coordonnée k
+    fld qword [rsp + 8]     ; empilage de la coordonnée j
+    fld qword [rsp + 16]    ; empilage de la coordonnée i
+    fld qword [rsp + 24]    ; empilage de la partie réelle
+    
+    add rsp, 64     ; vidage de la pile stack du ALU des float enregistrés pour les calculs
+    """
     return s
 
 def type_exp(e):
@@ -886,8 +931,7 @@ ast = grammaire.parse("""
         x = 1. + 2.3i + 4.5j + 3.4k;
         r = 1. + 2.3i + 4.5j + 3.4k;
         print(1. + 2.3i + 4.5j + 3.4k)
-        print(1. + 2.3i + 4.5j + 3.4k - 1. + 2.3i + 4.5j + 3.4k)
-        print(r)
+        print(1. + 2.3i + 4.5j + 3.4k * 1. + 2.3i + 4.5j + 3.4k)
         return(1);
     }
 """)
