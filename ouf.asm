@@ -1,7 +1,6 @@
 extern printf, atoi
 section .data
 fmt : db "%d", 10, 0
-float_print : db "%g", 10, 0
 argc : dq 0
 argv : dq 0
 y : dq 0
@@ -39,12 +38,8 @@ main :
 
     mov rax, [rbp - 32]
 
-     mov rdi, float_print
-    sub rsp, 8
-    fst qword [rsp]
-    movq xmm0, qword [rsp]
-    add rsp, 8
-    mov rax, 1
+    mov rdi, fmt
+    mov rsi, rax
     call printf
     pop rbp
     ret
