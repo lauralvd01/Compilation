@@ -23,33 +23,64 @@ OPBIN : /[+\-*>]/
 """, start="prg")
 
 op = {'+': 'add', '-': 'sub'}
+op_float = {'+': 'fadd', '-': 'fsub', '*': 'fmul'}
 
 variables = {}
 
 
 ### ASM ###
-def asm_exp(e):
+def asm_exp(e, id=None):
     if e.data == "exp_int":
         return f"mov rax, {e.children[0].value}\n"
     if e.data == "exp_float":
-        return f"mov rax, __float64__({e.children[0].value})\n"
+        return f"""mov rax, __float64__({e.children[0].value})"""
     elif e.data == "exp_var":
-        return f"mov rax, [{variables[e.children[0].value][1]}]\n"
+        return f"mov rax, [{variables[id][1]}]\n"
     elif e.data == "exp_par":
-        return asm_exp(e.children[0])
-    else:
-        E1 = asm_exp(e.children[0])
-        E2 = asm_exp(e.children[2])
-        return f"""
-        {E2}
-        push rax
-        {E1}
-        pop rbx
-        {op[e.children[1].value]} rax, rbx
-        """
+        return asm_exp(e.children[0], id)
+    elif e.data == "exp_opbin":
+        type = getType(e.children[0])
+        pushed = False
+        s = ""
+
+        if type == "int":
+            E1 = asm_exp(e.children[0], id)
+            E2 = asm_exp(e.children[2], id)
+            s += f"""
+            {E2}
+            push rax
+            {E1}
+            pop rbx
+            {op[e.children[1].value]} rax, rbx\n
+            """
+        elif type == "float":
+            # Calcule le résultat de l'opération binaire sur les float
+            # et enregistre le résultat dans st(0)
+            # --> calcule le float résultat de l'expression 2 et l'empile en st(0)
+            # --> calcule le float résultat de l'expression 1 et l'empile en st(0)
+            # --> E2 devient st(1)
+
+            E2 = asm_exp(e.children[2])
+            E1 = asm_exp(e.children[0])
+            # --> calcule st0 = st0 op_float st1 donc le résultat s'enregistre en st(0)
+            s += f"""
+            {E2}
+            push rax
+            fld qword [rsp]
+            {E1}
+            push rax
+            fld qword [rsp]
+            {op_float[e.children[1].value]} st0, st1
+            fstp qword [rsp]
+            pop rax
+            add rsp, 8
+            """
+
+        return s
 
 
 def asm_com(c):
+
     if c.data == "assignation":
         # get the name of the variable
         v = c.children[0].value
@@ -57,7 +88,7 @@ def asm_com(c):
         # get the type of the variable
         type = getType(c.children[1])
         # get the asm assignation
-        E = asm_exp(c.children[1])
+        E = asm_exp(c.children[1], c.children[0])
 
         if type == variables[v][0]:
             # it is the same type as before
@@ -100,27 +131,39 @@ fin{n} : nop
 """
     elif c.data == "print":
 
-        E = asm_exp(c.children[0])
-        print("child", c.children[0].children[0])
+        E = asm_exp(c.children[0], c.children[0].children[0])
         if c.children[0].children[0] in variables:
             type = variables[c.children[0].children[0]][0]
         else:
             type = getType(c.children[0])
-        print("type", type)
+
+        s = f""
+        pushed = False
+
+        if (8*(cpt-1)) % 16 != 0:
+            print(True)
+            s += f"push rax\n"
+            pushed = True
+
         if type == "int":
-            return f"""
+            s += f"""
         {E}
         mov rdi, int_fmt
         mov rsi, rax
-        call printf
+        call printf\n
         """
+
         if type == "float":
-            return f"""
+            s += f"""
         {E}
          movq xmm0, qword rax   ; floating point in str
         mov rdi, float_fmt              ; address of format string
         mov rax, 1                  ; 1 floating point argument to printf
-        call printf"""
+        call printf\n"""
+        if pushed:
+            s += "pop rbx\n"
+
+        return s
 
 
 def asm_bcom(bc):
@@ -163,17 +206,18 @@ def asm_prg(p):
 
     # pop all the variables at the end of assembly code
     a = ""
-    for i in range(cpt-1):
+    for i in range(cpt):
         a += "pop rbx\n"
     moule = moule.replace("END", a)
 
     # we write the body of the assembly
-    print("children", p.children[1].children[2].data)
+
     C = asm_bcom(p.children[1])
     moule = moule.replace("BODY", C)
 
     # we return the variable
-    E = asm_exp(p.children[2])
+
+    E = asm_exp(p.children[2], p.children[2].children[0])
     moule = moule.replace("RETURN", E)
 
     return moule
@@ -294,15 +338,11 @@ def getType(e):
 
 
 ast = grammaire.parse(""" main(x,y){
-        
-        a = 4;
-        i = 0;
-        a = 2.64;
-        i = i + 1;
-        x = x - 1;
-        print(i)
+        i = 1;
+        a = 1.0 + 4.7;
         print(a)
-             
+        print(3.5 + 1.5)
+           c
  return (y);
  }
 """)
