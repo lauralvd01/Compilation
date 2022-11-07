@@ -18,49 +18,8 @@ main :
     mov [argc], rdi
     mov [argv], rsi
     
-        mov rbx, [argv]
-        mov rdi, [rbx + 8]
-        xor rax, rax
-        call atoi
-        mov rbx, rbp
-        sub rbx, 96
-        mov [rbx], rax
-        
     finit
     
-            
-    mov rax, __float64__(3.4)
-    push rax
-    fld qword [rsp]
-    
-    mov rax, __float64__(4.5)
-    push rax
-    fld qword [rsp]
-    
-    mov rax, __float64__(2.3)
-    push rax
-    fld qword [rsp]
-    
-    mov rax, __float64__(1.)
-    push rax
-    fld qword [rsp]
-    
-    add rsp, 32
-    
-            
-            mov rax, rbp
-            sub rax, 64
-            push rax
-            
-    mov rbx, [rsp]
-    fstp qword [rbx]
-    fstp qword [rbx + 8]
-    fstp qword [rbx + 16]
-    fstp qword [rbx + 24]
-    
-
-            finit
-            
             
     mov rax, __float64__(3.4)
     push rax
@@ -93,6 +52,54 @@ main :
     
 
             finit
+            
+            
+            mov rax, rbp
+            sub rax, 32
+            push rax
+            
+    mov rbx, [rsp]
+    fld qword [rbx + 24]
+    fld qword [rbx + 16]
+    fld qword [rbx + 8]
+    fld qword [rbx]
+    
+            
+            
+    mov rdi, partie_reelle
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+    mov rdi, coord_i
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+    mov rdi, coord_j
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+    mov rdi, coord_k
+    sub rsp, 8
+    fstp qword [rsp]
+    movq xmm0, qword [rsp]
+    add rsp, 8
+    mov rax, 1
+    call printf
+    
+    finit
+    
             
             
     mov rax, __float64__(3.4)
@@ -710,21 +717,9 @@ main :
     finit
     
             
-            
-            mov rax, rbp
-            sub rax, 96
-            mov rax, [rax]
-            
-            mov rdi, entier_print
-            mov rsi, rax
-            call printf
-            
     
-    
-            mov rax, rbp
-            sub rax, 96
-            mov rax, [rax]
-            
+    mov rax, 1
+
     
         mov rdi, entier_print
         mov rsi, rax

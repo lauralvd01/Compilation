@@ -20,10 +20,6 @@ com : IDENTIFIER "=" exp ";"     -> assignation
 | "if" "(" exp ")" "{" bcom "}"  -> if
 | "while" "(" exp ")" "{" bcom "}"  -> while
 | "print" "(" exp ")"               -> print
-| "re(" IDENTIFIER ")" "=" exp ";"  -> ass_reel
-| IDENTIFIER ".i" "=" exp ";"       -> ass_i
-| IDENTIFIER ".j" "=" exp ";"       -> ass_j
-| IDENTIFIER ".k" "=" exp ";"       -> ass_k
 bcom : (com)*
 prg : "main" "(" var_list ")" "{" bcom "return" "(" exp ")" ";"  "}"
 var_list :                       -> vide
@@ -36,6 +32,12 @@ OPBIN : /[+\-*>]/
 %ignore WS
 """,start="prg")
 
+# TODO ?
+# com
+#| "re(" IDENTIFIER ")" "=" exp ";"  -> ass_reel
+#| IDENTIFIER ".i" "=" exp ";"       -> ass_i
+#| IDENTIFIER ".j" "=" exp ";"       -> ass_j
+#| IDENTIFIER ".k" "=" exp ";"       -> ass_k
 
 ########################
 #### PRETTY PRINTER ####
@@ -125,26 +127,6 @@ def float_get_in_st_from_tree_exp(e):
     """
     return s
 
-def float_get_rsp_into_st():
-    ## As pop st
-    ## Dépile le float au top de la pile stack du ALU et l'empile à la pile stack du FPU
-    ## --> récupère le float enregistré en rsp et l'empile à la pile stack du FPU
-    s = """
-    fld qword [rsp]
-    """
-    return s
-
-def float_get_st_into_rsp():
-    ## As push st
-    ## Dépile le float enregistré au top de la pile stack du FPU et l'empile dans la pile stack du ALU
-    ## --> décrémente rsp pour allouer une nouvelle case à la pile stack du ALU
-    ## --> lit le float enregistré en st(0) et le met en rsp
-    s = """
-    sub rsp, 8
-    fst qword [rsp]
-    """
-    return s
-
 def float_transfer_st_to_storage():
     ## As mov [rsp], st
     ## Dépile le float au top de la pile stack du FPU et le sauvegarde dans la case de la pile stack ALU
@@ -171,7 +153,6 @@ def float_print_from_st():
     finit
     """
     return s
-
 
 
 ###############
@@ -205,25 +186,21 @@ def quat_get_in_st_from_tree_exp(e):
     push rax
     fld qword [rsp]
     """
-
     s += f"""
     mov rax, __float64__({j})
     push rax
     fld qword [rsp]
     """
-
     s += f"""
     mov rax, __float64__({i})
     push rax
     fld qword [rsp]
     """
-
     s += f"""
     mov rax, __float64__({r})
     push rax
     fld qword [rsp]
     """
-
     s += """
     add rsp, 32
     """
@@ -953,14 +930,14 @@ def vars_prg(p):
 #######################
 
 ast = grammaire.parse("""
-    main(z){
+    main(){
         x = 1. + 2.3i + 4.5j + 3.4k;
-        r = 1. + 2.3i + 4.5j + 3.4k;
+        print(x)
         
         print(1. + 2.3i + 4.5j + 3.4k)
         print(1. + 2.3i + 4.5j + 3.4k + 1. + 2.3i + 4.5j + 3.4k)
         print(1. + 2.3i + 4.5j + 3.4k - 1. + 2.3i + 4.5j + 3.4k)
-        print(1. + 2.3i + 4.5j + 3.4k * 1. + 0.0i + 0.0j + 0.0k)
+        print(1. + 2.3i + 4.5j + 3.4k * 1. + 2.3i + 4.5j + 3.4k)
 
         print(re(1. + 2.3i + 4.5j + 3.4k))
         print(im(1. + 2.3i + 4.5j + 3.4k))
@@ -969,8 +946,7 @@ ast = grammaire.parse("""
         print( (1. + 2.3i + 4.5j + 3.4k).j )
         print( (1. + 2.3i + 4.5j + 3.4k).k )
 
-        print(z)
-        return(z);
+        return(1);
     }
 """)
 
