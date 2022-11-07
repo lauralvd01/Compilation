@@ -20,6 +20,10 @@ com : IDENTIFIER "=" exp ";"     -> assignation
 | "if" "(" exp ")" "{" bcom "}"  -> if
 | "while" "(" exp ")" "{" bcom "}"  -> while
 | "print" "(" exp ")"               -> print
+| "re(" IDENTIFIER ")" "=" exp ";"  -> ass_reel
+| IDENTIFIER ".i" "=" exp ";"       -> ass_i
+| IDENTIFIER ".j" "=" exp ";"       -> ass_j
+| IDENTIFIER ".k" "=" exp ";"       -> ass_k
 bcom : (com)*
 prg : "main" "(" var_list ")" "{" bcom "return" "(" exp ")" ";"  "}"
 var_list :                       -> vide
@@ -163,6 +167,8 @@ def float_print_from_st():
     add rsp, 8
     mov rax, 1
     call printf
+
+    finit
     """
     return s
 
@@ -299,6 +305,10 @@ def quat_print_from_st():
     mov rax, 1
     call printf
     """
+
+    s += f"""
+    finit
+    """
     
     return s
 
@@ -309,6 +319,8 @@ def quat_add(e):
     E2 = asm_exp(e.children[0])
     # On a alors r1 en st(4), i1 en st(5), j1 en st(6), k1 en st(7), r2 en st(0), i2 en st(1), j2 en st(2) et k2 en st(3)
     s = f"""
+    finit
+
     {E1}
     {E2}
 
@@ -326,6 +338,8 @@ def quat_sub(e):
     E2 = asm_exp(e.children[0])
     # On a alors r1 en st(4), i1 en st(5), j1 en st(6), k1 en st(7), r2 en st(0), i2 en st(1), j2 en st(2) et k2 en st(3)
     s = f"""
+    finit
+
     {E1}
     {E2}
     
@@ -342,6 +356,8 @@ def quat_mult(e):
     # Calcule le quaternion résultat de l'expression 1 et l'empile au top de la pile stack du FPU
     E1 = asm_exp(e.children[0])
     s = f"""
+    finit
+
     {E2}
     {E1}
     """
@@ -481,12 +497,7 @@ def quat_mult(e):
 
     # Vidage de la pile stack du FPU
     s += f"""
-    sub rsp, 8
-    fstp qword [rsp]
-    fstp qword [rsp]
-    fstp qword [rsp]
-    fstp qword [rsp]
-    add rsp, 8
+    finit
     """
 
     # Empilage des nouvelles coordonnées dans la pile stack du FPU
@@ -514,8 +525,10 @@ def type_exp(e):
         except KeyError:
             # La variable n'a pas été assignée avant d'être utilisée dans une expression
             # c'est donc que la variable a été donnée en argument
-            # pour le moment les seuls arguments possibles sont des entiers (TODO)
-            return "entier"    
+            # les seuls arguments possibles ici sont des entiers
+            type_des_variables[e.children[0].value] = "entier"
+            return "entier"
+
     elif e.data == "exp_opbin":
         return type_exp(e.children[0])
     elif e.data == "exp_par":
@@ -543,9 +556,20 @@ def asm_exp(e):
         return float_get_in_st_from_tree_exp(e)
 
     elif e.data == "exp_var":
-        type_var = type_des_variables[e.children[0].value]
+
         position_var = positions_des_variables[e.children[0].value]
 
+        try:
+            type_var = type_des_variables[e.children[0].value]
+            type_var = type_des_variables[e.children[0].value]
+        except:
+            # On effectue des opérations entre argument(s) et entiers
+            return f"""
+            mov rax, rbp
+            sub rax, {position_var}
+            mov rax, [rax]
+            """
+            
         if type_var == "entier":
             ## Lit dans le dictionnaire des adresses des variables l'adresse de la variable
             ##   pour pouvoir obtenir la valeur de la variable et l'enregistrer dans rax
@@ -554,7 +578,7 @@ def asm_exp(e):
             sub rax, {position_var}
             mov rax, [rax]
             """
-
+        
         elif type_var == "float":
             ## Lit le float enregistré à l'adresse de la variable et l'empile au top de la pile stack du FPU
             s = f"""
@@ -566,7 +590,7 @@ def asm_exp(e):
             """
             return s
 
-        elif(type_var == "quat"):
+        elif type_var == "quat":
             ## Enregistre les coordonnées du quaternion désigné par la variable dans la pile stack du FPU :
             s = f"""
             mov rax, rbp
@@ -586,7 +610,7 @@ def asm_exp(e):
         type_op = type_exp(e.children[0]) 
         # On ne peut effectuer des opérations binaires que sur des objets de même type !
 
-        if(type_op == "entier"):
+        if type_op == "entier":
             E1 = asm_exp(e.children[0])
             E2 = asm_exp(e.children[2])
             return f"""
@@ -597,7 +621,7 @@ def asm_exp(e):
             {op[e.children[1].value]} rax, rbx
             """
         
-        elif(type_op == "float"):
+        elif type_op == "float":
             ## Calcule le résultat de l'opération binaire sur les float 
             ##  et enregistre le résultat dans st(0)
             # --> calcule le float résultat de l'expression 2 et l'empile en st(0)
@@ -613,7 +637,7 @@ def asm_exp(e):
             """
             return s
         
-        elif(type_op == "quat"):
+        elif type_op == "quat":
             ## Calcule les résultats de chaque expression puis le résultat de l'opération
             ##   sur celles-ci et l'empile au top de la pile stack du FPU
             if(e.children[1].value == '+'):
@@ -731,6 +755,8 @@ def asm_com(c):
             {exp}
             {stock}
             {stack}
+
+            finit
             """
             return s
 
@@ -748,6 +774,8 @@ def asm_com(c):
             {exp}
             {stock}
             {stack}
+
+            finit
             """
             return s
         
@@ -782,7 +810,7 @@ def asm_com(c):
     elif c.data == "print":
         type_print = type_exp(c.children[0])
 
-        if(type_print == "entier"):
+        if type_print == "entier":
             E = asm_exp(c.children[0])
             return f"""
             {E}
@@ -791,7 +819,7 @@ def asm_com(c):
             call printf
             """
         
-        elif(type_print == "float"):
+        elif type_print == "float":
             s = ""
             calcul = asm_exp(c.children[0])
             print = float_print_from_st()
@@ -801,7 +829,7 @@ def asm_com(c):
             """
             return s
         
-        elif(type_print == "quat"):
+        elif type_print == "quat":
             s = f"""
             {asm_exp(c.children[0])}
             {quat_print_from_st()}
@@ -834,19 +862,19 @@ def asm_prg(p):
     global type_des_variables
     type_des_variables = {}
     
-    # TODO : pour le moment on ne peut mettre en argument que des entiers
+    # Ici on ne peut passer en argument de main que des entiers    
     s = ""
     for i in range(len(p.children[0].children)):
         v = p.children[0].children[i].value
-        adresse = positions_des_variables[v]
+        position_var = positions_des_variables[v]
         e = f"""
         mov rbx, [argv]
         mov rdi, [rbx + { 8*(i+1)}]
         xor rax, rax
         call atoi
-        mov rcx, rbp
-        sub rcx, {adresse}
-        mov [rcx], rax
+        mov rbx, rbp
+        sub rbx, {position_var}
+        mov [rbx], rax
         """
         s = s + e
     moule = moule.replace("INIT_VARS", s)
@@ -925,21 +953,24 @@ def vars_prg(p):
 #######################
 
 ast = grammaire.parse("""
-    main(){
+    main(z){
         x = 1. + 2.3i + 4.5j + 3.4k;
         r = 1. + 2.3i + 4.5j + 3.4k;
-
+        
         print(1. + 2.3i + 4.5j + 3.4k)
+        print(1. + 2.3i + 4.5j + 3.4k + 1. + 2.3i + 4.5j + 3.4k)
         print(1. + 2.3i + 4.5j + 3.4k - 1. + 2.3i + 4.5j + 3.4k)
-        print(1. + 2.3i + 4.5j + 3.4k * 1. + 2.3i + 4.5j + 3.4k)
+        print(1. + 2.3i + 4.5j + 3.4k * 1. + 0.0i + 0.0j + 0.0k)
 
         print(re(1. + 2.3i + 4.5j + 3.4k))
         print(im(1. + 2.3i + 4.5j + 3.4k))
 
         print( (1. + 2.3i + 4.5j + 3.4k).i )
+        print( (1. + 2.3i + 4.5j + 3.4k).j )
         print( (1. + 2.3i + 4.5j + 3.4k).k )
 
-        return(1);
+        print(z)
+        return(z);
     }
 """)
 
