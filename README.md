@@ -83,6 +83,5 @@ ast4 = grammaire.parse(""" main(y){
            x = 4;
        }
        print(x)
-
  return (y);
  }
