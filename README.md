@@ -1,6 +1,8 @@
 # Compilation
 
 compiloArray.py 
+  
+  Compilateur permettant la manipulation de tableaux d'entiers.
 
   Commandes liées à la manipulation de tableaux :
   
