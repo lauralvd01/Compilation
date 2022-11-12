@@ -19,6 +19,7 @@ Note :
 
 # changing type between int and float
 ast1 = grammaire.parse(""" main(y){
+
         x = 5;
         print(x)
         x = 2.5;
@@ -31,6 +32,7 @@ ast1 = grammaire.parse(""" main(y){
 
  # Adding two floats together. Adding to integers together
 ast2 = grammaire.parse(""" main(y){
+
         x = 4.3;
         y = 2.5;
         z = x + y;
@@ -46,6 +48,7 @@ ast2 = grammaire.parse(""" main(y){
 
 # Using a while loop and modifying the argument as an integer and as a float
 ast3 = grammaire.parse(""" main(y){
+
         x = 5;
         y = 2.5;
         while(x){
@@ -69,6 +72,7 @@ ast3 = grammaire.parse(""" main(y){
 
 # Using an if statement, changing the type of the argument in the statement
 ast4 = grammaire.parse(""" main(y){
+
         x = 5;
         if(x){
            x = 0.4;
