@@ -38,3 +38,35 @@ Affichage des coordonnées i, j et k d'un quaternion
 print(1.7 + 2.2 i + 2.3 j + 7.0 k .i)
 print(1.7 + 2.2 i + 2.3 j + 7.0 k .j)
 print(1.7 + 2.2 i + 2.3 j + 7.0 k .k)
+
+
+Synthaxe pour créer des variables, leur assigner une valeur, les afficher et effectuer des opérations dessus :
+
+x = 3;
+y = 4.6;
+z = 1.7 + 2.2 i + 2.3 j + 7.0 k .k;
+x = x + 4;
+x = 6 * x;
+print(x)
+print(y)
+print(z)
+
+
+Synthaxe pour créer une boucle while ou un if
+(la condition est la valeur d'un entier : true = 1 et le reste signifie false)
+
+x = 1;
+y = 8;
+while(x){
+    y = y + 1;
+    if(x){
+        x = 0;
+    }
+}
+print(x)
+print(y)
+
+
+Utiliser des arguments dans main() : 
+Les seuls arguments acceptés sont des entiers
+Ils s'utilisent comme des variables

@@ -23,7 +23,7 @@ main :
         xor rax, rax
         call atoi
         mov rbx, rbp
-        sub rbx, 32
+        sub rbx, 64
         mov [rbx], rax
         
     finit
@@ -149,20 +149,18 @@ main :
             finit
             
             
-            
     mov rax, __float64__(1.3)
     push rax
     fld qword [rsp]
     add rsp,8
     
             
+            
     mov rax, __float64__(4.5)
     push rax
     fld qword [rsp]
     add rsp,8
     
-            faddp st1, st0
-            
             
             
     mov rax, __float64__(8.9)
@@ -179,6 +177,8 @@ main :
             fmulp st1, st0
             
             fsubp st1, st0
+            
+            faddp st1, st0
             
             
     
@@ -1384,7 +1384,7 @@ main :
     
             
             mov rax, rbp
-            sub rax, 96
+            sub rax, 32
             push rax
             
     mov rbx, [rsp]
@@ -1422,7 +1422,7 @@ main :
         
             
             mov rax, rbp
-            sub rax, 64
+            sub rax, 96
             push rax
             
     mov rbx, [rsp]
@@ -1444,7 +1444,7 @@ main :
             finit
             
             mov rax, rbp
-            sub rax, 96
+            sub rax, 32
             mov rax, [rax]
             
             
@@ -1467,7 +1467,7 @@ main :
             finit
             
             mov rax, rbp
-            sub rax, 64
+            sub rax, 96
             mov rax, [rax]
             
             
@@ -1496,7 +1496,7 @@ main :
             mov rax, 8
 
             mov rbx, rbp
-            sub rbx, 96
+            sub rbx, 32
             mov [rbx], rax
             
         debut2 : 
@@ -1513,14 +1513,14 @@ main :
             push rax
             
             mov rax, rbp
-            sub rax, 96
+            sub rax, 32
             mov rax, [rax]
             
             pop rbx
             add rax, rbx
             
             mov rbx, rbp
-            sub rbx, 96
+            sub rbx, 32
             mov [rbx], rax
             
         
@@ -1553,7 +1553,7 @@ main :
             
             
             mov rax, rbp
-            sub rax, 96
+            sub rax, 32
             mov rax, [rax]
             
             mov rdi, entier_print
@@ -1562,7 +1562,7 @@ main :
             
             
             mov rax, rbp
-            sub rax, 32
+            sub rax, 64
             mov rax, [rax]
             
             mov rdi, entier_print
@@ -1575,19 +1575,19 @@ main :
             push rax
             
             mov rax, rbp
-            sub rax, 32
+            sub rax, 64
             mov rax, [rax]
             
             pop rbx
             add rax, rbx
             
             mov rbx, rbp
-            sub rbx, 32
+            sub rbx, 64
             mov [rbx], rax
             
             
             mov rax, rbp
-            sub rax, 32
+            sub rax, 64
             mov rax, [rax]
             
             mov rdi, entier_print
