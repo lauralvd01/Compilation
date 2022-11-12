@@ -1,4 +1,4 @@
-# Compilation
+# Compilation : Arrays
 
 compiloArray.py 
   
@@ -13,7 +13,7 @@ compiloArray.py
 
 
 
-# Compilation
+# Compilation : Dynamic Typing
 
 CompiloDynamicTyping.py
 
@@ -27,14 +27,10 @@ Limits of the compilator :
 -There are some problems with the while statement when the argument is a float
 -There are some problems with the if statement if the argument was changed in a while statement before
 
-
-Note : 
-
-
  possibilities :
- All those possibilities are on the Dynamic Typing compilator
+ All those possibilities are on the Dynamic Typing compilator for you to test
 
-# changing type between int and float
+-changing type between int and float
 ast1 = grammaire.parse(""" main(y){
 
         x = 5;
@@ -47,7 +43,7 @@ ast1 = grammaire.parse(""" main(y){
  }
 """)
 
- # Adding two floats together. Adding to integers together
+-Adding two floats together. Adding to integers together
 ast2 = grammaire.parse(""" main(y){
 
         x = 4.3;
@@ -63,7 +59,7 @@ ast2 = grammaire.parse(""" main(y){
 """)
 
 
-# Using a while loop and modifying the argument as an integer and as a float
+-Using a while loop and modifying the argument as an integer and as a float
 ast3 = grammaire.parse(""" main(y){
 
         x = 5;
@@ -87,7 +83,7 @@ ast3 = grammaire.parse(""" main(y){
  }
 
 
-# Using an if statement, changing the type of the argument in the statement
+-Using an if statement, changing the type of the argument in the statement
 ast4 = grammaire.parse(""" main(y){
 
         x = 5;
