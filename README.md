@@ -35,7 +35,6 @@ ast2 = grammaire.parse(""" main(y){
         y = 2.5;
         z = x + y;
         print(z)
-
         x = 4;
         y = 2;
         z = x + y;
@@ -56,7 +55,6 @@ ast3 = grammaire.parse(""" main(y){
         }
         print(x)
         print(y)
-
         x = 0.5;
         y = 2.5;
         while(x){
@@ -72,12 +70,10 @@ ast3 = grammaire.parse(""" main(y){
 # Using an if statement, changing the type of the argument in the statement
 ast4 = grammaire.parse(""" main(y){
         x = 5;
-
         if(x){
            x = 0.4;
         }
         print(x)
-
        x = 6.4;
        if(x){
            x = 4;
