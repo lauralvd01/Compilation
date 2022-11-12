@@ -858,7 +858,7 @@ def asm_bcom(bc):
     return "".join([asm_com(c) for c in bc.children])
 
 def asm_prg(p):
-    f = open("moule.asm")
+    f = open("mouleQuat.asm")
     moule = f.read()
     
     ## Création du dictionnaire des adresses des variables
