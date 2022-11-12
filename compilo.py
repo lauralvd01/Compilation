@@ -30,6 +30,8 @@ variables = {}
 
 ### ASM ###
 def asm_exp(e, id=None):
+    # Id permet de récuperer le nom de la variable (qui n'est pas dans e)
+    # pour avoir accès a l'adresse
     if e.data == "exp_int":
         return f"mov rax, {e.children[0].value}\n"
     if e.data == "exp_float":
@@ -40,12 +42,20 @@ def asm_exp(e, id=None):
         return asm_exp(e.children[0], id)
     elif e.data == "exp_opbin":
         type = getType(e.children[0])
-        pushed = False
-        s = ""
 
+        s = ""
         if type == "int":
-            E1 = asm_exp(e.children[0], id)
-            E2 = asm_exp(e.children[2], id)
+            print("now", e.children[0].data)
+            if e.children[0].data == "exp_var":
+                E1 = asm_exp(e.children[0], e.children[0].children[0])
+            else:
+                E1 = asm_exp(e.children[0])
+
+            if e.children[2].data == "exp_var":
+                E2 = asm_exp(e.children[2], e.children[2].children[0])
+            else:
+                E2 = asm_exp(e.children[2])
+
             s += f"""
             {E2}
             push rax
@@ -60,8 +70,16 @@ def asm_exp(e, id=None):
             # --> calcule le float résultat de l'expression 1 et l'empile en st(0)
             # --> E2 devient st(1)
 
-            E2 = asm_exp(e.children[2])
-            E1 = asm_exp(e.children[0])
+            if e.children[0].data == "exp_var":
+                E1 = asm_exp(e.children[0], e.children[0].children[0])
+            else:
+                E1 = asm_exp(e.children[0])
+
+            if e.children[2].data == "exp_var":
+                E2 = asm_exp(e.children[2], e.children[2].children[0])
+            else:
+                E2 = asm_exp(e.children[2])
+
             # --> calcule st0 = st0 op_float st1 donc le résultat s'enregistre en st(0)
             s += f"""
             {E2}
@@ -82,17 +100,24 @@ def asm_exp(e, id=None):
 def asm_com(c):
 
     if c.data == "assignation":
+
         # get the name of the variable
         v = c.children[0].value
 
         # get the type of the variable
+
         type = getType(c.children[1])
+
         # get the asm assignation
-        E = asm_exp(c.children[1], c.children[0])
+        if c.children[1].data == "exp_var":
+            E = asm_exp(c.children[1], c.children[1].children[0])
+        else:
+            print("here", c.children[1])
+            E = asm_exp(c.children[1])
 
         if type == variables[v][0]:
             # it is the same type as before
-            # we just have to
+            # we just have to change the value
             return f"""
             {E}
             mov [{variables[v][1]}], rax
@@ -107,7 +132,8 @@ def asm_com(c):
             """
 
     elif c.data == "if":
-        E = asm_exp(c.children[0])
+
+        E = asm_exp(c.children[0], c.children[0].children[0])
         C = asm_bcom(c.children[1])
         n = next()
         return f"""
@@ -205,10 +231,6 @@ def asm_prg(p):
     moule = moule.replace("INIT_VARS", s)
 
     # pop all the variables at the end of assembly code
-    a = ""
-    for i in range(cpt):
-        a += "pop rbx\n"
-    moule = moule.replace("END", a)
 
     # we write the body of the assembly
 
@@ -216,6 +238,12 @@ def asm_prg(p):
     moule = moule.replace("BODY", C)
 
     # we return the variable
+
+    a = ""
+    for i in range(cpt-1):
+
+        a += "pop rbx\n"
+    moule = moule.replace("END", a)
 
     E = asm_exp(p.children[2], p.children[2].children[0])
     moule = moule.replace("RETURN", E)
@@ -313,6 +341,7 @@ cpt = 0
 def increment():
     global cpt
     cpt += 1
+
     return cpt
 
 
@@ -333,16 +362,20 @@ def getType(e):
         return "float"
     elif e.data == "exp_opbin":
         return getType(e.children[0])
+    elif e.data == "exp_var":
+        print("children=", e.children[0])
+        return variables[e.children[0]][0]
+
     else:
         return "int"
 
 
-ast = grammaire.parse(""" main(x,y){
-        i = 1;
-        a = 1.0 + 4.7;
-        print(a)
-        print(3.5 + 1.5)
-           c
+ast = grammaire.parse(""" main(y){ 
+        x = 1.4;
+        z = 4.5;
+        x = x + 0.4 ; 
+        print(x)
+        print(z)
  return (y);
  }
 """)
