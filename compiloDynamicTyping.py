@@ -41,6 +41,7 @@ def asm_exp(e, id=None):
     elif e.data == "exp_par":
         return asm_exp(e.children[0], id)
     elif e.data == "exp_opbin":
+        print(e.children[0])
         type = getType(e.children[0])
 
         s = ""
@@ -72,6 +73,7 @@ def asm_exp(e, id=None):
 
             if e.children[0].data == "exp_var":
                 E1 = asm_exp(e.children[0], e.children[0].children[0])
+
             else:
                 E1 = asm_exp(e.children[0])
 
@@ -113,15 +115,14 @@ def asm_com(c):
             E = asm_exp(c.children[1], c.children[1].children[0])
         else:
             E = asm_exp(c.children[1])
-        print("now", c.children[1])
-        print("type", type)
 
         if type == variables[v][0]:
             # it is the same type as before
             # we just have to change the value
-            print("sd", c.children[1].children[0])
-            if c.children[1].children[0] in ["exp_int", "exp_float"]:
-                variables[v][2] = c.children[1].children[0].value
+
+            if (c.children[1].data == "exp_int") or (c.children[1].data == "exp_float"):
+                variables[v][2] = c.children[1].children[0]
+
             return f"""
             {E}
             mov [{variables[v][1]}], rax
@@ -129,7 +130,7 @@ def asm_com(c):
 
         else:
             variables[v] = [type,  f"rbp - {cpt*8}",
-                            c.children[1].children[0].value]
+                            c.children[1].children[0]]
 
             increment()
             return f"""
@@ -138,11 +139,11 @@ def asm_com(c):
             """
 
     elif c.data == "if":
-        print("test",
-              variables[c.children[0].children[0]][2])
+
         E = asm_exp(c.children[0], c.children[0].children[0])
         # test if the argument is true (!=0). It avoids rsp being offset if =0
-        if (float(variables[c.children[0].children[0]][2]) != 0):
+
+        if (float(variables[c.children[0].children[0]][2]) != float(0)):
             C = asm_bcom(c.children[1])
         else:
             C = "nop"
@@ -155,10 +156,12 @@ def asm_com(c):
 fin{n} : nop
 """
     elif c.data == "while":
+
         if c.children[0].data == "exp_var":
             E = asm_exp(c.children[0], c.children[0].children[0])
         else:
             E = asm_exp(c.children[0])
+
         C = asm_bcom(c.children[1])
         n = next()
         return f"""
@@ -181,7 +184,7 @@ fin{n} : nop
         pushed = False
 
         if (8*(cpt-1)) % 16 != 0:
-            print(True)
+
             s += f"push rax\n"
             pushed = True
 
@@ -211,7 +214,7 @@ def asm_bcom(bc):
 
 
 def asm_prg(p):
-    f = open("moule.asm")
+    f = open("mouleDynamicTyping.asm")
     moule = f.read()
 
     # get the name of all the variables used
@@ -222,7 +225,6 @@ def asm_prg(p):
     for i in range(len(variablespos)):
         variables[variablespos[i]] = ["int", f"rbp - {cpt*8}", 0]
         increment()
-    print("variables à l'init ", variables)
 
     # we declare the variables
     D = "\n".join([f"{v} : dq 0" for v in vars_prg(p)])
@@ -384,25 +386,99 @@ def getType(e):
         return "int"
 
 
-ast = grammaire.parse(""" main(y){ 
+# EXAMPLE 1
+# changing type between int and float
+ast1 = grammaire.parse(""" main(y){
         x = 5;
-        y = 2.5;
-        while(x){
-            x = x - 1;
-            y = y - 0.5;
-        }
         print(x)
-        print(y)
-        y = 1;
-        if(y){
-            print(3)
-        }
+        x = 2.5;
+        print(x)
+        x = 3;
+        print(x)
  return (y);
  }
 """)
-asm = asm_prg(ast)
-print("variable à la fin ", variables)
-# print(asm)
+asm1 = asm_prg(ast1)
+
 f = open("ouf.asm", "w")
-f.write(asm)
+f.write(asm1)
 f.close()
+
+
+# # EXAMPLE 2
+# # Adding two floats together. Adding to integers together
+# ast2 = grammaire.parse(""" main(y){
+#         x = 4.3;
+#         y = 2.5;
+#         z = x + y;
+#         print(z)
+
+#         x = 4;
+#         y = 2;
+#         z = x + y;
+#         print(z)
+#  return (y);
+#  }
+# """)
+# asm2 = asm_prg(ast2)
+
+# f = open("ouf.asm", "w")
+# f.write(asm2)
+# f.close()
+
+
+# # EXAMPLE 3
+# # Using a while loop and modifying the argument as an integer and as a float
+# ast3 = grammaire.parse(""" main(y){
+#         x = 5;
+#         y = 2.5;
+#         while(x){
+#             x = x - 1;
+#             print(x)
+#             y = y - 0.5;
+#         }
+#         print(x)
+#         print(y)
+
+#         x = 0.5;
+#         y = 2.5;
+#         while(x){
+#             x = x - 0.5;
+#             y = y + 0.5;
+#         }
+#         print(x)
+#         print(y)
+#  return (y);
+#  }
+# """)
+# asm3 = asm_prg(ast3)
+
+# f = open("ouf.asm", "w")
+# f.write(asm3)
+# f.close()
+
+
+# # EXAMPLE 4
+# # Using an if statement, changing the type of the argument in the statement
+# ast4 = grammaire.parse(""" main(y){
+#         x = 5;
+
+#         if(x){
+#            x = 0.4;
+#         }
+#         print(x)
+
+#        x = 6.4;
+#        if(x){
+#            x = 4;
+#        }
+#        print(x)
+
+#  return (y);
+#  }
+# """)
+# asm4 = asm_prg(ast4)
+
+# f = open("ouf.asm", "w")
+# f.write(asm4)
+# f.close()
