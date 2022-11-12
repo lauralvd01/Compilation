@@ -18,6 +18,14 @@ main :
     mov [argc], rdi
     mov [argv], rsi
     
+        mov rbx, [argv]
+        mov rdi, [rbx + 8]
+        xor rax, rax
+        call atoi
+        mov rbx, rbp
+        sub rbx, 32
+        mov [rbx], rax
+        
     finit
     
             mov rax, 17
@@ -116,30 +124,29 @@ main :
             mov rax, 2
 
             push rax
-            
             mov rax, 9
 
-            push rax
-            mov rax, 5
-
-            pop rbx
-            sub rax, rbx
-            
             pop rbx
             imul rax, rbx
             
+            push rax
+            
+            mov rax, 5
+
             push rax
             mov rax, 3
 
             pop rbx
             add rax, rbx
             
+            pop rbx
+            sub rax, rbx
+            
             mov rdi, entier_print
             mov rsi, rax
             call printf
             
             finit
-            
             
             
             
@@ -157,13 +164,12 @@ main :
             faddp st1, st0
             
             
+            
     mov rax, __float64__(8.9)
     push rax
     fld qword [rsp]
     add rsp,8
     
-            fsubp st1, st0
-            
             
     mov rax, __float64__(1.2)
     push rax
@@ -171,6 +177,8 @@ main :
     add rsp,8
     
             fmulp st1, st0
+            
+            fsubp st1, st0
             
             
     
@@ -1333,7 +1341,7 @@ main :
             mov rax, 3
 
             mov rbx, rbp
-            sub rbx, 96
+            sub rbx, 128
             mov [rbx], rax
             
             
@@ -1342,20 +1350,20 @@ main :
             push rax
             
             mov rax, rbp
-            sub rax, 96
+            sub rax, 128
             mov rax, [rax]
             
             pop rbx
             add rax, rbx
             
             mov rbx, rbp
-            sub rbx, 96
+            sub rbx, 128
             mov [rbx], rax
             
             
             
             mov rax, rbp
-            sub rax, 96
+            sub rax, 128
             mov rax, [rax]
             
             push rax
@@ -1365,7 +1373,7 @@ main :
             imul rax, rbx
             
             mov rbx, rbp
-            sub rbx, 96
+            sub rbx, 128
             mov [rbx], rax
             
             
@@ -1376,7 +1384,7 @@ main :
     
             
             mov rax, rbp
-            sub rax, 32
+            sub rax, 96
             push rax
             
     mov rbx, [rsp]
@@ -1426,7 +1434,7 @@ main :
             
             
             mov rax, rbp
-            sub rax, 96
+            sub rax, 128
             mov rax, [rax]
             
             mov rdi, entier_print
@@ -1436,7 +1444,7 @@ main :
             finit
             
             mov rax, rbp
-            sub rax, 32
+            sub rax, 96
             mov rax, [rax]
             
             
@@ -1482,18 +1490,18 @@ main :
             mov rax, 1
 
             mov rbx, rbp
-            sub rbx, 96
+            sub rbx, 128
             mov [rbx], rax
             
             mov rax, 8
 
             mov rbx, rbp
-            sub rbx, 32
+            sub rbx, 96
             mov [rbx], rax
             
         debut2 : 
             mov rax, rbp
-            sub rax, 96
+            sub rax, 128
             mov rax, [rax]
             
         cmp rax, 0
@@ -1501,6 +1509,68 @@ main :
         
             
             mov rax, 1
+
+            push rax
+            
+            mov rax, rbp
+            sub rax, 96
+            mov rax, [rax]
+            
+            pop rbx
+            add rax, rbx
+            
+            mov rbx, rbp
+            sub rbx, 96
+            mov [rbx], rax
+            
+        
+            mov rax, rbp
+            sub rax, 128
+            mov rax, [rax]
+            
+        cmp rax, 0
+        jz fin1
+        
+            mov rax, 0
+
+            mov rbx, rbp
+            sub rbx, 128
+            mov [rbx], rax
+            
+        fin1 : nop
+        
+        jmp debut2
+        fin2 : nop
+        
+            
+            mov rax, rbp
+            sub rax, 128
+            mov rax, [rax]
+            
+            mov rdi, entier_print
+            mov rsi, rax
+            call printf
+            
+            
+            mov rax, rbp
+            sub rax, 96
+            mov rax, [rax]
+            
+            mov rdi, entier_print
+            mov rsi, rax
+            call printf
+            
+            
+            mov rax, rbp
+            sub rax, 32
+            mov rax, [rax]
+            
+            mov rdi, entier_print
+            mov rsi, rax
+            call printf
+            
+            
+            mov rax, 6
 
             push rax
             
@@ -1514,34 +1584,6 @@ main :
             mov rbx, rbp
             sub rbx, 32
             mov [rbx], rax
-            
-        
-            mov rax, rbp
-            sub rax, 96
-            mov rax, [rax]
-            
-        cmp rax, 0
-        jz fin1
-        
-            mov rax, 0
-
-            mov rbx, rbp
-            sub rbx, 96
-            mov [rbx], rax
-            
-        fin1 : nop
-        
-        jmp debut2
-        fin2 : nop
-        
-            
-            mov rax, rbp
-            sub rax, 96
-            mov rax, [rax]
-            
-            mov rdi, entier_print
-            mov rsi, rax
-            call printf
             
             
             mov rax, rbp

@@ -1020,10 +1020,11 @@ print(arg)
 """
 
 ast = grammaire.parse(f"""
-    main(){{
+    main(arg){{
         {test1}
         {test2}
         {test3}
+        {test4}
         return(1);
     }}
 """)
