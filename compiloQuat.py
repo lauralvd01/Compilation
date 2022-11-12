@@ -293,18 +293,16 @@ def quat_add(e):
     # Calcule le quaternion résultat de l'expression 1 et l'empile au top de la pile stack du FPU
     E1 = asm_exp(e.children[0])
     # Calcule le quaternion résultat de l'expression 2 et l'empile au top de la pile stack du FPU
-    E2 = asm_exp(e.children[0])
+    E2 = asm_exp(e.children[2])
     # On a alors r1 en st(4), i1 en st(5), j1 en st(6), k1 en st(7), r2 en st(0), i2 en st(1), j2 en st(2) et k2 en st(3)
     s = f"""
     finit
-
     {E1}
     {E2}
-
-    faddp st4,st0       ; on obtient r1+r2 en st(4) puis on pop donc tout se décale d'un cran
-    faddp st4,st0       ; on obtient i1+i2 en st(4) puis on pop donc tout se décale d'un cran
-    faddp st4,st0       ; on obtient j1+j2 en st(4) puis on pop donc tout se décale d'un cran
-    faddp st4,st0       ; on obtient k1+k2 en st(4) puis on pop donc tout se décale d'un cran
+    faddp st4,st0       ; on obtient r1+r2 en st(4) puis on pop donc tout se décale d'un cran (r1+r2 --> en st3)
+    faddp st4,st0       ; on obtient i1+i2 en st(4) puis on pop donc tout se décale d'un cran (r1+r2 --> en st2, i1+i2 --> en st3)
+    faddp st4,st0       ; on obtient j1+j2 en st(4) puis on pop donc tout se décale d'un cran (r1+r2 --> en st1, i1+i2 --> en st2, j1+j2 --> en st3)
+    faddp st4,st0       ; on obtient k1+k2 en st(4) puis on pop donc tout se décale d'un cran (r1+r2 --> en st0, i1+i2 --> en st1, j1+j2 --> en st2, k1+k2 --> en st3)
     """
     return s
 
@@ -312,18 +310,16 @@ def quat_sub(e):
     # Calcule le quaternion résultat de l'expression 1 et l'empile au top de la pile stack du FPU
     E1 = asm_exp(e.children[0])
     # Calcule le quaternion résultat de l'expression 2 et l'empile au top de la pile stack du FPU
-    E2 = asm_exp(e.children[0])
+    E2 = asm_exp(e.children[2])
     # On a alors r1 en st(4), i1 en st(5), j1 en st(6), k1 en st(7), r2 en st(0), i2 en st(1), j2 en st(2) et k2 en st(3)
     s = f"""
     finit
-
     {E1}
     {E2}
-    
-    fsubp st4,st0       ; on obtient r1+r2 en st(4) puis on pop donc tout se décale d'un cran
-    fsubp st4,st0       ; on obtient i1+i2 en st(4) puis on pop donc tout se décale d'un cran
-    fsubp st4,st0       ; on obtient j1+j2 en st(4) puis on pop donc tout se décale d'un cran
-    fsubp st4,st0       ; on obtient k1+k2 en st(4) puis on pop donc tout se décale d'un cran
+    fsubp st4,st0       ; on obtient r1-r2 en st(4) puis on pop donc tout se décale d'un cran (r1-r2 --> en st3)
+    fsubp st4,st0       ; on obtient i1-i2 en st(4) puis on pop donc tout se décale d'un cran (r1-r2 --> en st2, i1-i2 --> en st3)
+    fsubp st4,st0       ; on obtient j1-j2 en st(4) puis on pop donc tout se décale d'un cran (r1-r2 --> en st1, i1-i2 --> en st2, j1-j2 --> en st3)
+    fsubp st4,st0       ; on obtient k1-k2 en st(4) puis on pop donc tout se décale d'un cran (r1-r2 --> en st0, i1-i2 --> en st1, j1-j2 --> en st2, k1-k2 --> en st3)
     """
     return s
 
@@ -331,7 +327,7 @@ def quat_mult(e):
     # Calcule le quaternion résultat de l'expression 2 et l'empile au top de la pile stack du FPU
     E2 = asm_exp(e.children[0])
     # Calcule le quaternion résultat de l'expression 1 et l'empile au top de la pile stack du FPU
-    E1 = asm_exp(e.children[0])
+    E1 = asm_exp(e.children[2])
     s = f"""
     finit
 
@@ -517,8 +513,8 @@ def type_exp(e):
     else:
         "Cas non traité"
 
-op = {'+' : 'add', '-' : 'sub', '*' : 'mult'}
-op_float = {'+' : 'fadd', '-' : 'fsub', '*' : 'fmul'}
+op = {'+' : 'add', '-' : 'sub', '*' : 'imul'}
+op_float = {'+' : 'faddp', '-' : 'fsubp', '*' : 'fmulp'}
 
 def asm_exp(e):
     if e.data == "exp_quat":
@@ -600,17 +596,17 @@ def asm_exp(e):
         
         elif type_op == "float":
             ## Calcule le résultat de l'opération binaire sur les float 
-            ##  et enregistre le résultat dans st(0)
-            # --> calcule le float résultat de l'expression 2 et l'empile en st(0)
+            ##  et enregistre le résultat dans st(0), sans laisser de valeur parasite dans la pile
             # --> calcule le float résultat de l'expression 1 et l'empile en st(0)
-            # --> E2 devient st(1)
-            E2 = asm_exp(e.children[2])
+            # --> calcule le float résultat de l'expression 2 et l'empile en st(0)
+            # --> E1 devient st(1)
             E1 = asm_exp(e.children[0])
-            # --> calcule st0 = st0 op_float st1 donc le résultat s'enregistre en st(0)
+            E2 = asm_exp(e.children[2])
+            # --> calcule st1 = st1 op_float st0 puis dépile donc le résultat s'enregistre en st(0), la valeur parasite étant dépilée
             s = f"""
-            {E2}
             {E1}
-            {op_float[e.children[1].value]} st0, st1
+            {E2}
+            {op_float[e.children[1].value]} st1, st0
             """
             return s
         
@@ -801,15 +797,19 @@ def asm_com(c):
             calcul = asm_exp(c.children[0])
             print = float_print_from_st()
             s += f"""
+            finit
             {calcul}
             {print}
+            finit
             """
             return s
         
         elif type_print == "quat":
             s = f"""
+            finit
             {asm_exp(c.children[0])}
             {quat_print_from_st()}
+            finit
             """
             return s
         
@@ -929,25 +929,33 @@ def vars_prg(p):
 ######## TESTS ########
 #######################
 
-ast = grammaire.parse("""
-    main(){
-        x = 1. + 2.3i + 4.5j + 3.4k;
-        print(x)
-        
-        print(1. + 2.3i + 4.5j + 3.4k)
-        print(1. + 2.3i + 4.5j + 3.4k + 1. + 2.3i + 4.5j + 3.4k)
-        print(1. + 2.3i + 4.5j + 3.4k - 1. + 2.3i + 4.5j + 3.4k)
-        print(1. + 2.3i + 4.5j + 3.4k * 1. + 2.3i + 4.5j + 3.4k)
+## Test print pour chaque expression sans enregistrement dans une variable
+test1 = """
+print(17)
+print(1.7)
+print(1.7 + 2.2 i + 2.3 j + 7.0 k)
+print(3 + 5 - 9 * 2 )
+print(1.3 + 4.5 - 8.9 * 1.2 )
+print(1.7 + 2.2 i + 2.3 j + 7.0 k + 1.7 + 2.2 i + 2.3 j + 7.0 k)
+print(1.7 + 2.2 i + 2.3 j + 7.0 k - 1.0 + 1.0 i + 1.0 j + 1.0 k)
+print(1.7 + 2.2 i + 2.3 j + 7.0 k - 1.7 + 2.2 i + 2.3 j + 7.0 k)
+print(1.7 + 2.2 i + 2.3 j + 7.0 k * 0.0 + 0.0 i + 0.0 j + 0.0 k)
+print(1.7 + 2.2 i + 2.3 j + 7.0 k * 2.0 + 0.0 i + 0.0 j + 0.0 k)
+print(1.7 + 2.2 i + 2.3 j + 7.0 k * 1.7 + 2.2 i + 2.3 j + 7.0 k)
+print(1.3 + 4.5 - (8.9 * 1.2))
+print(re(1.7 + 2.2 i + 2.3 j + 7.0 k))
+print(im(1.7 + 2.2 i + 2.3 j + 7.0 k))
+print(1.7 + 2.2 i + 2.3 j + 7.0 k .i)
+print(1.7 + 2.2 i + 2.3 j + 7.0 k .j)
+print(1.7 + 2.2 i + 2.3 j + 7.0 k .k)
+"""
 
-        print(re(1. + 2.3i + 4.5j + 3.4k))
-        print(im(1. + 2.3i + 4.5j + 3.4k))
 
-        print( (1. + 2.3i + 4.5j + 3.4k).i )
-        print( (1. + 2.3i + 4.5j + 3.4k).j )
-        print( (1. + 2.3i + 4.5j + 3.4k).k )
-
+ast = grammaire.parse(f"""
+    main(){{
+        {test1}
         return(1);
-    }
+    }}
 """)
 
 print(pp_prg(ast))
