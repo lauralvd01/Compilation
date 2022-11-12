@@ -111,6 +111,16 @@ def indent(s: str, amplitude = 4):
 ###### ASSEMBLEUR ######
 ########################
 
+rsp = 0
+
+def empty():
+    global rsp
+    s = f"""
+    add rsp, {rsp}
+    """
+    rsp = 0
+    return s
+
 ###############
 #### FLOAT ####
 ###############
@@ -136,12 +146,18 @@ def float_transfer_st_to_storage():
     s = """
     mov rbx, [rsp]
     fstp qword [rbx]
+    add rsp, 8
     """
+    global rsp
+    rsp += 8
     return s
 
 def float_print_from_st():
     ## Print un float enregistré au top st(0) de la pile stack FPU
-    s = """
+    s = f"""
+    {empty()}
+    """
+    s += """
     mov rdi, float_print
     sub rsp, 8
     fst qword [rsp]
@@ -221,7 +237,10 @@ def quat_transfer_st_to_storage():
     fstp qword [rbx + 8]
     fstp qword [rbx + 16]
     fstp qword [rbx + 24]
+    add rsp, 8
     """
+    global rsp
+    rsp += 8
     return s
 
 def quat_get_in_st_from_storage():
@@ -238,12 +257,19 @@ def quat_get_in_st_from_storage():
     fld qword [rbx + 16]
     fld qword [rbx + 8]
     fld qword [rbx]
+    add rsp, 8
     """
+    global rsp
+    rsp += 8
     return s
 
 def quat_print_from_st():
     # Print un quaternion enregistré dans la pile stack du FPU (et le dépile)
     s = f"""
+    {empty()}
+    """
+    
+    s += f"""
     mov rdi, partie_reelle
     sub rsp, 8
     fstp qword [rsp]
@@ -345,7 +371,8 @@ def quat_mult(e):
 
     ## On sauvegarde les coordonnées du quaternion résultat 1 au top de la pile stack du ALU
     ## On peut ensuite empiler 4 nouveaux float, utilisés pour faire les calculs, au top de la pile stack du FPU
-
+    global rsp
+    rsp -= 32
     s += f"""
     sub rsp, 32
     fstp qword [rsp]        ; enregistre r1
@@ -382,6 +409,7 @@ def quat_mult(e):
     fstp qword [rsp]    ; on dépile k1*k2
     add rsp, 8 
     """
+    rsp -= 8
 
     ## Calcul de la coordonnée i
     s += f"""
@@ -410,7 +438,8 @@ def quat_mult(e):
     fstp qword [rsp]    ; on dépile k1*j2
     add rsp, 8 
     """
-    
+    rsp -= 8
+
     ## Calcul de la coordonnée j
     s += f"""
     fld qword [rsp + 40]  ; push k1 en st(0), r2 en st(1), i2 en st(2), j2 en st(3), k2 en st(4)
@@ -438,6 +467,7 @@ def quat_mult(e):
     fstp qword [rsp]    ; on dépile k1*i2
     add rsp, 8 
     """
+    rsp -= 8
     
     ## Calcul de la coordonnée k
     # (r1*k2 + i1*j2 - j1*i2 + k1*r2). k
@@ -467,6 +497,7 @@ def quat_mult(e):
     fstp qword [rsp]    ; on dépile k1*r2
     add rsp, 8 
     """
+    rsp -= 8
 
     # Vidage de la pile stack du FPU
     s += f"""
@@ -482,6 +513,7 @@ def quat_mult(e):
     
     add rsp, 64     ; vidage de la pile stack du ALU des float enregistrés pour les calculs
     """
+    rsp += 64
     return s
 
 def type_exp(e):
@@ -534,7 +566,7 @@ def asm_exp(e):
 
         try:
             type_var = type_des_variables[e.children[0].value]
-            type_var = type_des_variables[e.children[0].value]
+            type_var = type_des_variables[e.children[2].value]
         except:
             # On effectue des opérations entre argument(s) et entiers
             return f"""
@@ -557,8 +589,6 @@ def asm_exp(e):
             s = f"""
             mov rax, rbp
             sub rax, {position_var}
-            push rax
-            mov rax, [rsp]
             fld qword [rax]
             """
             return s
@@ -571,6 +601,8 @@ def asm_exp(e):
             push rax
             {quat_get_in_st_from_storage()}
             """
+            global rsp
+            rsp -= 8
             return s
         
         else:
@@ -722,6 +754,8 @@ def asm_com(c):
             mov rax, rbp
             sub rax, {adresse}
             push rax"""
+            global rsp
+            rsp -= 8
             # Enregistrement du float dans la pile stack du ALU à l'adresse prévue pour la variable
             stack = float_transfer_st_to_storage()
             s = f"""
@@ -741,6 +775,7 @@ def asm_com(c):
             mov rax, rbp
             sub rax, {adresse}
             push rax"""
+            rsp -= 8
             # Enregistrement des coordonnées du quaternion dans la pile stack du ALU à l'adresse prévue pour la variable
             stack = f"""{quat_transfer_st_to_storage()}"""
             s = f"""
@@ -865,6 +900,7 @@ def asm_prg(p):
 
     if type_ret == "entier":
         print_ret = f"""
+        {empty()}
         mov rdi, entier_print
         mov rsi, rax
         call printf
@@ -950,10 +986,15 @@ print(1.7 + 2.2 i + 2.3 j + 7.0 k .j)
 print(1.7 + 2.2 i + 2.3 j + 7.0 k .k)
 """
 
+## Test d'assignation de valeurs à des variables et de la lecture de variables
+test2 = """
+x = 1.7 + 2.2 i + 2.3 j + 7.0 k .k;
+print(x)
+"""
 
 ast = grammaire.parse(f"""
     main(){{
-        {test1}
+        {test2}
         return(1);
     }}
 """)
