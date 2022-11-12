@@ -45,7 +45,7 @@ def asm_exp(e, id=None):
 
         s = ""
         if type == "int":
-            print("now", e.children[0].data)
+
             if e.children[0].data == "exp_var":
                 E1 = asm_exp(e.children[0], e.children[0].children[0])
             else:
@@ -112,19 +112,25 @@ def asm_com(c):
         if c.children[1].data == "exp_var":
             E = asm_exp(c.children[1], c.children[1].children[0])
         else:
-            print("here", c.children[1])
             E = asm_exp(c.children[1])
+        print("now", c.children[1])
+        print("type", type)
 
         if type == variables[v][0]:
             # it is the same type as before
             # we just have to change the value
+            print("sd", c.children[1].children[0])
+            if c.children[1].children[0] in ["exp_int", "exp_float"]:
+                variables[v][2] = c.children[1].children[0].value
             return f"""
             {E}
             mov [{variables[v][1]}], rax
             """
 
         else:
-            variables[v] = [type,  f"rbp - {cpt*8}"]
+            variables[v] = [type,  f"rbp - {cpt*8}",
+                            c.children[1].children[0].value]
+
             increment()
             return f"""
             {E}
@@ -132,9 +138,14 @@ def asm_com(c):
             """
 
     elif c.data == "if":
-
+        print("test",
+              variables[c.children[0].children[0]][2])
         E = asm_exp(c.children[0], c.children[0].children[0])
-        C = asm_bcom(c.children[1])
+        # test if the argument is true (!=0). It avoids rsp being offset if =0
+        if (float(variables[c.children[0].children[0]][2]) != 0):
+            C = asm_bcom(c.children[1])
+        else:
+            C = "nop"
         n = next()
         return f"""
         {E}                                  
@@ -144,7 +155,10 @@ def asm_com(c):
 fin{n} : nop
 """
     elif c.data == "while":
-        E = asm_exp(c.children[0])
+        if c.children[0].data == "exp_var":
+            E = asm_exp(c.children[0], c.children[0].children[0])
+        else:
+            E = asm_exp(c.children[0])
         C = asm_bcom(c.children[1])
         n = next()
         return f"""
@@ -203,10 +217,10 @@ def asm_prg(p):
     # get the name of all the variables used
     variablespos = [v for v in vars_prg(p)]
 
-    # we set their type as "int" and give the an adress to use
+    # we set their type as "int" and give them an adress to use, as well as value (0) used for if and while
     global variables
     for i in range(len(variablespos)):
-        variables[variablespos[i]] = ["int", f"rbp - {cpt*8}"]
+        variables[variablespos[i]] = ["int", f"rbp - {cpt*8}", 0]
         increment()
     print("variables à l'init ", variables)
 
@@ -363,7 +377,7 @@ def getType(e):
     elif e.data == "exp_opbin":
         return getType(e.children[0])
     elif e.data == "exp_var":
-        print("children=", e.children[0])
+
         return variables[e.children[0]][0]
 
     else:
@@ -371,11 +385,18 @@ def getType(e):
 
 
 ast = grammaire.parse(""" main(y){ 
-        x = 1.4;
-        z = 4.5;
-        x = x + 0.4 ; 
+        x = 5;
+        y = 2.5;
+        while(x){
+            x = x - 1;
+            y = y - 0.5;
+        }
         print(x)
-        print(z)
+        print(y)
+        y = 1;
+        if(y){
+            print(3)
+        }
  return (y);
  }
 """)
