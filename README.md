@@ -44,6 +44,7 @@ ast1 = grammaire.parse(""" main(y){
  }
 """)
 
+
 -Adding two floats together. Adding to integers together
 ast2 = grammaire.parse(""" main(y){
 
@@ -145,7 +146,6 @@ print(1.7 + 2.2 i + 2.3 j + 7.0 k .k)
 
 
 Synthaxe pour créer des variables, leur assigner une valeur, les afficher et effectuer des opérations dessus :
-
 x = 3;
 y = 4.6;
 z = 1.7 + 2.2 i + 2.3 j + 7.0 k .k;
@@ -158,7 +158,6 @@ print(z)
 
 Synthaxe pour créer une boucle while ou un if
 (la condition est la valeur d'un entier : true = 1 et le reste signifie false)
-
 x = 1;
 y = 8;
 while(x){
