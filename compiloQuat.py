@@ -986,15 +986,44 @@ print(1.7 + 2.2 i + 2.3 j + 7.0 k .j)
 print(1.7 + 2.2 i + 2.3 j + 7.0 k .k)
 """
 
-## Test d'assignation de valeurs à des variables et de la lecture de variables
+## Test d'assignation de valeurs à des variables, d'opérations sur des variables et et de la lecture de variables
 test2 = """
-x = 1.7 + 2.2 i + 2.3 j + 7.0 k .k;
+x = 3;
+x = x + 4;
+x = 6 * x;
+y = 4.6;
+z = 1.7 + 2.2 i + 2.3 j + 7.0 k .k;
 print(x)
+print(y)
+print(z)
+"""
+
+## Test de if et while
+test3 = """
+x = 1;
+y = 8;
+while(x){
+    y = y + 1;
+    if(x){
+        x = 0;
+    }
+}
+print(x)
+print(y)
+"""
+
+## Test sur des entiers passés en argument
+test4 = """
+print(arg)
+arg = arg + 6;
+print(arg)
 """
 
 ast = grammaire.parse(f"""
     main(){{
+        {test1}
         {test2}
+        {test3}
         return(1);
     }}
 """)
