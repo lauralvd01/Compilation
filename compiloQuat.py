@@ -876,11 +876,9 @@ def asm_prg(p):
 
     variables = [v for v in vars_prg(p)]
     for i in range(len(variables)) :
-        positions_des_variables[f"{variables[i]}"]= (i+1)*32
+        positions_des_variables[f"{variables[i]}"]= (i+1)*(32 + 16)
     global place_libre_rsp_pour_print
     place_libre_rsp_pour_print = positions_des_variables[variables[-1]] + 16
-    print(place_libre_rsp_pour_print)
-    print(positions_des_variables)
 
     global type_des_variables
     type_des_variables = {}
@@ -1047,4 +1045,3 @@ asm = asm_prg(ast)
 f = open("quat.asm", "w")
 f.write(asm)
 f.close()
-print(type_des_variables)
