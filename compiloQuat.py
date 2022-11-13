@@ -156,8 +156,9 @@ def float_print_from_st():
     ## Print un float enregistré au top st(0) de la pile stack FPU
     s = f"""
     {empty()}
+    sub rsp, {place_libre_rsp_pour_print}
     """
-    s += """
+    s += f"""
     mov rdi, float_print
     sub rsp, 8
     fst qword [rsp]
@@ -165,6 +166,7 @@ def float_print_from_st():
     add rsp, 8
     mov rax, 1
     call printf
+    add rsp, {place_libre_rsp_pour_print}
 
     finit
     """
@@ -182,6 +184,7 @@ def float_print_from_st():
 #  32 bytes par rapport à la précédente :
 type_des_variables = {}
 positions_des_variables = {}
+place_libre_rsp_pour_print = 0
 
 # Les coordonnées d'un quaternion sont toujours enregistrées dans les piles stack
 #  selon l'ordre croissant des adresses :
@@ -267,6 +270,7 @@ def quat_print_from_st():
     # Print un quaternion enregistré dans la pile stack du FPU (et le dépile)
     s = f"""
     {empty()}
+    sub rsp, {place_libre_rsp_pour_print}
     """
     
     s += f"""
@@ -310,6 +314,8 @@ def quat_print_from_st():
     """
 
     s += f"""
+    add rsp, {place_libre_rsp_pour_print}
+
     finit
     """
     
@@ -566,9 +572,9 @@ def asm_exp(e):
 
         try:
             type_var = type_des_variables[e.children[0].value]
-            type_var = type_des_variables[e.children[2].value]
         except:
             # On effectue des opérations entre argument(s) et entiers
+            type_des_variables[e.children[0].value] = "entier"
             return f"""
             mov rax, rbp
             sub rax, {position_var}
@@ -822,9 +828,12 @@ def asm_com(c):
             E = asm_exp(c.children[0])
             return f"""
             {E}
+            {empty()}
+            sub rsp, {place_libre_rsp_pour_print}
             mov rdi, entier_print
             mov rsi, rax
             call printf
+            add rsp, {place_libre_rsp_pour_print}
             """
         
         elif type_print == "float":
@@ -868,6 +877,10 @@ def asm_prg(p):
     variables = [v for v in vars_prg(p)]
     for i in range(len(variables)) :
         positions_des_variables[f"{variables[i]}"]= (i+1)*32
+    global place_libre_rsp_pour_print
+    place_libre_rsp_pour_print = positions_des_variables[variables[-1]] + 16
+    print(place_libre_rsp_pour_print)
+    print(positions_des_variables)
 
     global type_des_variables
     type_des_variables = {}
@@ -882,9 +895,9 @@ def asm_prg(p):
         mov rdi, [rbx + { 8*(i+1)}]
         xor rax, rax
         call atoi
-        mov rbx, rbp
-        sub rbx, {position_var}
-        mov [rbx], rax
+        mov rcx, rbp
+        sub rcx, {position_var}
+        mov [rcx], rax
         """
         s = s + e
     moule = moule.replace("INIT_VARS", s)
@@ -899,9 +912,11 @@ def asm_prg(p):
     if type_ret == "entier":
         print_ret = f"""
         {empty()}
+        sub rsp, {place_libre_rsp_pour_print}
         mov rdi, entier_print
         mov rsi, rax
         call printf
+        add rsp, {place_libre_rsp_pour_print}
         """
     elif type_ret == "float":
         print_ret = float_print_from_st()
@@ -990,7 +1005,7 @@ x = 3;
 x = x + 4;
 x = 6 * x;
 y = 4.6;
-z = 1.7 + 2.2 i + 2.3 j + 7.0 k .k;
+z = 1.7 + 2.2 i + 2.3 j + 7.8 k;
 print(x)
 print(y)
 print(z)
@@ -1013,7 +1028,7 @@ print(y)
 ## Test sur des entiers passés en argument
 test4 = """
 print(arg)
-arg = arg + 6;
+arg = 1 + arg;
 print(arg)
 """
 
@@ -1032,3 +1047,4 @@ asm = asm_prg(ast)
 f = open("quat.asm", "w")
 f.write(asm)
 f.close()
+print(type_des_variables)
