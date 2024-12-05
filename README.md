@@ -1,3 +1,6 @@
+# Compilation
+Réplique d'un compilateur de C, écrit en Assembly x86, permettant d'utiliser d'une part des Arrays et d'autres parts du typage dynamique et des quaternions. Leurs utilisations combinées ne sont pas toutes prévues.
+
 =======
 # Compilation : Arrays
 
